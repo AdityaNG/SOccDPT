@@ -1,20 +1,15 @@
-import json
-import os
-import random
-import traceback
-from pathlib import Path
-
-import numpy as np
-import torch
-import wandb
-from torch import optim
-from torch.utils.data import random_split
-from tqdm import tqdm
-
 from ..datasets.bengaluru_driving_dataset import (
-    OCTraN_Depth_Segmentation,
-    class_2_color,
+    BDD_Depth_Segmentation,
+    class_2_color as class_2_color_bdd,
     get_bdd_dataset,
+)
+from ..datasets.idd import (
+    get_all_IDD_Depth_Segmentation_datasets,
+)
+from ..datasets.anue_labels import (
+    LEVEL1_ID,
+    level1_to_class,
+    level1_to_color as class_2_color_idd,
 )
 from ..loss import (
     freeze_pretrained_encoder,
@@ -25,6 +20,21 @@ from ..model.loader import load_model, load_transforms
 from ..model.SOccDPT import DepthNet, SegNet, SOccDPT_versions, model_types
 from ..patchwise_training import PatchWiseInplace
 from ..utils import evaluate, get_batch
+
+from torch.utils.data import random_split
+from torch import optim
+from tqdm import tqdm
+import json
+import os
+import random
+import traceback
+from pathlib import Path
+
+import numpy as np
+import torch
+import wandb
+
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def train_net_wandb():
@@ -41,7 +51,9 @@ def train_net_wandb():
     patchwise_percentage = wandb.config.patchwise_percentage
     loss_weights = wandb.config.loss_weights
     dataset_percentage = wandb.config.dataset_percentage
+    compute_scale_and_shift = wandb.config.compute_scale_and_shift
     load_depth = wandb.config.load_depth
+    load_seg = wandb.config.load_seg
     load = wandb.config.load
 
     version = wandb.config.version
@@ -51,30 +63,35 @@ def train_net_wandb():
     checkpoint_dir = wandb.config.checkpoint_dir
     project_name = wandb.config.project_name
     base_path = wandb.config.base_path
+    dataset = wandb.config.dataset
 
     SOccDPT = SOccDPT_versions[version]
 
     try:
         train_net(
-            experiment,
-            epochs,
-            batch_size,
-            learning_rate,
-            val_percent,
-            save_checkpoint,
-            amp,
-            weight_decay,
-            encoder_percentage,
-            patchwise_percentage,
-            loss_weights,
-            dataset_percentage,
-            load_depth=load_depth,
+            experiment=experiment,
+            epochs=epochs,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            val_percent=val_percent,
+            save_checkpoint=save_checkpoint,
+            amp=amp,
+            weight_decay=weight_decay,
+            encoder_percentage=encoder_percentage,
+            patchwise_percentage=patchwise_percentage,
+            loss_weights=loss_weights,
+            dataset_percentage=dataset_percentage,
+            compute_scale_and_shift=compute_scale_and_shift,
             load=load,
+            load_depth=load_depth,
+            load_seg=load_seg,
             SOccDPT=SOccDPT,
+            SOccDPT_version=version,
             device=device,
             model_type=model_type,
             checkpoint_dir=checkpoint_dir,
             base_path=base_path,
+            dataset_name=dataset,
             project_name=project_name,
         )
     except Exception as ex:
@@ -96,12 +113,17 @@ def train_net(
     patchwise_percentage,
     loss_weights,
     dataset_percentage,
+    compute_scale_and_shift,
     load,
+    load_depth,
+    load_seg,
     SOccDPT,
+    SOccDPT_version,
     device,
     model_type,
     checkpoint_dir,
     base_path,
+    dataset_name,
     project_name,
 ):
     dir_checkpoint = os.path.join(checkpoint_dir, project_name)
@@ -124,34 +146,104 @@ def train_net(
     torch.manual_seed(0)
     torch.use_deterministic_algorithms(True, warn_only=True)
 
-    wandb_run_id = wandb.run.id
+    wandb_run = True
+    if wandb.run is None:
+        wandb_run = False
+
+    wandb_run_id = "dummy_run"
+    if wandb_run:
+        wandb_run_id = wandb.run.id
     print("wandb_run_id", wandb_run_id)
 
     # (Initialize logging)
-    wandb.config.update(
-        dict(
-            amp=amp,
-            epochs=epochs,
-            batch_size=batch_size,
-            val_percent=val_percent,
-            weight_decay=weight_decay,
-            learning_rate=learning_rate,
-            save_checkpoint=save_checkpoint,
+    if wandb_run:
+        wandb.config.update(
+            dict(
+                amp=amp,
+                epochs=epochs,
+                batch_size=batch_size,
+                val_percent=val_percent,
+                weight_decay=weight_decay,
+                learning_rate=learning_rate,
+                save_checkpoint=save_checkpoint,
+            )
         )
-    )
 
-    # Load net
+    # 1. Create dataset
     transforms, net_w, net_h = load_transforms(
         model_type=model_type,
     )
+    dataset = []
+    if "idd" in dataset_name:
+        train_datasets, val_datasets = get_all_IDD_Depth_Segmentation_datasets(
+            transforms,
+            level_id=LEVEL1_ID,
+            level_2_class=level1_to_class,
+            # idd_dataset_path=IDD_DATASET_PATH,
+        )
+        dataset = train_datasets + val_datasets
+        classes = set(level1_to_class.values())
+        num_classes = len(classes)
+        class_2_color = class_2_color_idd
+    elif "bdd" in dataset_name:
+        dataset = get_bdd_dataset(
+            BDD_Depth_Segmentation, transforms, base_path
+        )
+        num_classes = 3
+        class_2_color = class_2_color_bdd
+
+    assert len(dataset) > 0, "No dataset selected"
+
+    # dataset = ConcatDataset(dataset)
+
+    total_size = len(dataset)
+    total_use = int(round(total_size * dataset_percentage))
+    total_discard = total_size - total_use
+    dataset, _ = random_split(
+        dataset,
+        [total_use, total_discard],
+        generator=torch.Generator().manual_seed(0),
+    )
+    print("len(dataset)", len(dataset))
+    assert len(dataset) > 0, "Dataset is empty"
+
+    # 2. Split into train / validation partitions
+    n_val = int(len(dataset) * val_percent)
+    n_train = len(dataset) - n_val
+
+    assert n_val > 0, "Validation count is 0"
+    assert n_train > 0, "Train count is 0"
+
+    train_set, val_set = random_split(
+        dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0)
+    )
+
+    assert len(val_set) > 0, "Validation set is 0"
+    assert len(train_set) > 0, "Train set is 0"
+
+    # Load net
+    model_kwargs = dict(
+        num_classes=num_classes,
+    )
+    if SOccDPT_version == 1:
+        model_kwargs["load_depth"] = load_depth
+        model_kwargs["load_seg"] = load_seg
+    elif SOccDPT_version == 2:
+        assert load_depth is False, "V2 does not support loading depth"
+        assert load_seg is False, "V2 does not support loading seg"
+    elif SOccDPT_version == 3:
+        model_kwargs["load_depth"] = load_depth
+        assert load_seg is False, "V3 does not support loading seg"
+
     net = load_model(
         arch=SOccDPT,
-        model_kwargs=dict(path=load),
+        model_kwargs=model_kwargs,
         device=device_cpu,
+        model_path=load,
     )
 
     net = net.to(device=device)
-    net = torch.compile(net)
+    # net = torch.compile(net) # causes issues
 
     # Clear memory
     torch.cuda.empty_cache()
@@ -192,42 +284,17 @@ def train_net(
     mem = mem_params + mem_bufs  # in bytes
     print("mem", mem / 1024.0 / 1024.0, " MB")
 
-    # 1. Create dataset
-    dataset = get_bdd_dataset(OCTraN_Depth_Segmentation, transforms, base_path)
-    total_size = len(dataset)
-    total_use = int(round(total_size * dataset_percentage))
-    total_discard = total_size - total_use
-    dataset, _ = random_split(
-        dataset,
-        [total_use, total_discard],
-        generator=torch.Generator().manual_seed(0),
-    )
-    print("len(dataset)", len(dataset))
-
-    # 2. Split into train / validation partitions
-    n_val = int(len(dataset) * val_percent)
-    n_train = len(dataset) - n_val
-
-    assert n_val > 0, "Validation set is 0"
-    assert n_train > 0, "Train set is 0"
-
-    train_set, val_set = random_split(
-        dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0)
-    )
-
-    assert len(val_set) > 0, "Validation set is 0"
-    assert len(train_set) > 0, "Train set is 0"
-
-    print(
-        f"""Starting training:
-        epochs: {wandb.config.epochs}
-        batch_size: {wandb.config.batch_size}
-        learning_rate: {wandb.config.learning_rate}
-        val_percent: {wandb.config.val_percent}
-        save_checkpoint: {wandb.config.save_checkpoint}
-        amp: {wandb.config.amp}
-    """
-    )
+    if wandb_run:
+        print(
+            f"""Starting training:
+            epochs: {wandb.config.epochs}
+            batch_size: {wandb.config.batch_size}
+            learning_rate: {wandb.config.learning_rate}
+            val_percent: {wandb.config.val_percent}
+            save_checkpoint: {wandb.config.save_checkpoint}
+            amp: {wandb.config.amp}
+        """
+        )
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler
     # and the loss scaling for AMP
@@ -244,7 +311,9 @@ def train_net(
         optimizer, "min", patience=2
     )  # goal: minimize the loss
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    SSILoss_criterion = ScaleAndShiftInvariantLoss()
+    SSILoss_criterion = ScaleAndShiftInvariantLoss(
+        compute_scale_and_shift=compute_scale_and_shift
+    )
     BCE_criterion = torch.nn.BCELoss(reduction="mean")
 
     global_step = 0
@@ -322,7 +391,7 @@ def train_net(
                     # Evaluation round
                     division_step = n_train // (3 * batch_size)
                     # if division_step >= 0:
-                    if global_step % division_step == 0:
+                    if global_step % division_step == 0 and wandb_run:
                         evaluate(
                             net,
                             seg_wrapper,
@@ -368,16 +437,25 @@ def train_net(
 def main(args):
     with open(args.sweep_json, "r") as sweep_json_file:
         sweep_config = json.load(sweep_json_file)
-        sweep_config["device"] = args.device
-        sweep_config["version"] = args.version
-        sweep_config["model_type"] = args.model_type
-        sweep_config["checkpoint_dir"] = args.checkpoint_dir
 
-    project_name = "SOccDPT_V{version}_{model_type}".format(
-        version=str(args.version), model_type=args.model_type
+    sweep_config["parameters"]["device"] = {"values": [args.device]}
+    sweep_config["parameters"]["version"] = {"values": [args.version]}
+    sweep_config["parameters"]["model_type"] = {"values": [args.model_type]}
+    sweep_config["parameters"]["checkpoint_dir"] = {
+        "values": [args.checkpoint_dir]
+    }
+    sweep_config["parameters"]["dataset"] = {"values": [args.dataset]}
+    sweep_config["parameters"]["base_path"] = {"values": [args.base_path]}
+
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+
+    project_name = "SOccDPT_V{version}_{model_type}_{dataset}".format(
+        version=str(args.version),
+        model_type=args.model_type,
+        dataset=args.dataset,
     )
 
-    sweep_config["project_name"] = project_name
+    sweep_config["parameters"]["project_name"] = {"values": [project_name]}
 
     sweep_id = wandb.sweep(
         sweep_config, project=project_name, entity="pw22-sbn-01"
@@ -391,20 +469,35 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train SOccDPT")
     parser.add_argument(
-        "-v", "--version", choices=[1, 2, 3], help="SOccDPT version"
+        "-v",
+        "--version",
+        choices=[1, 2, 3],
+        required=True,
+        type=int,
+        help="SOccDPT version",
+    )
+
+    parser.add_argument(
+        "-dt",
+        "--dataset",
+        choices=["bdd", "idd", "idd+bdd"],
+        required=True,
+        help="Dataset to train using",
     )
 
     parser.add_argument(
         "-t",
         "--model_type",
         choices=model_types,
+        required=True,
         help="Model architecture to use",
     )
 
     parser.add_argument(
         "-d",
         "--device",
-        default="cuda:0" if torch.cuda.is_available() else "cpu",
+        # default="cuda:0" if torch.cuda.is_available() else "cpu",
+        default="cpu",
         help="Device to use for training",
     )
 
@@ -423,7 +516,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--sweep_json", help="Path to checkpoint to sweep json"
+        "--sweep_json", required=True, help="Path to checkpoint to sweep json"
     )
 
     args = parser.parse_args()

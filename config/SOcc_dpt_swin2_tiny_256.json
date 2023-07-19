@@ -1,0 +1,65 @@
+{
+    "method": "grid",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          30
+        ]
+      },
+      "batch_size": {
+        "values": [
+          5
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.95
+        ]
+      },
+      "dataset_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "loss_weights": {
+        "values": [
+          [1.0, 1.0]
+        ]
+      },
+      "load": {
+        "values": [
+          false,
+          "checkpoints/SOcc_dpt_swin2_tiny_256/6zm837f1/checkpoint_epoch5.pth"
+        ]
+      }
+    }
+  }

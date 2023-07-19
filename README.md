@@ -9,7 +9,7 @@
 
 To build, use:
 ```bash
-docker compose build
+DOCKER_BUILDKIT=1 docker compose build
 ```
 
 To run the interactive shell, use:
@@ -19,6 +19,69 @@ docker compose run dev
 
 ## Train
 
+Train v1 model on IDD dataset:
 ```bash
-python3 -m SOccDPT.scripts.train_SOccDPT
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 1 \
+    --dataset idd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V1_dpt_swin2_tiny_256_Jul_18.json
+```
+
+Train v1 model on BDD dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 1 \
+    --dataset bdd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V1_dpt_swin2_tiny_256_Jul_18.json
+```
+
+Train v2 model on IDD dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 2 \
+    --dataset idd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V2_dpt_swin2_tiny_256_Jul_18.json
+```
+
+Train v2 model on BDD dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 2 \
+    --dataset bdd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V2_dpt_swin2_tiny_256_Jul_18.json
+```
+
+
+Train v3 model on IDD dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 3 \
+    --dataset idd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V3_dpt_swin2_tiny_256_Jul_18.json
+```
+
+Train v3 model on BDD dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT \
+    --version 3 \
+    --dataset bdd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V3_dpt_swin2_tiny_256_Jul_18.json
+```
+
+# Evaluate PatchWise
+
+```bash
+python3.9 -m SOccDPT.scripts.eval_patchwise
 ```

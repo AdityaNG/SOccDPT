@@ -29,8 +29,8 @@ def load_model(
     Returns:
         The loaded network
     """
-    assert isinstance(
-        arch, DPT
+    assert issubclass(
+        arch, BaseModel
     ), f"arch '{arch}' not implemented, must be an instance of \
         SOccDPT.model.dpt.DPT"
 
@@ -177,7 +177,8 @@ def load_transforms(
         )
 
     elif model_type == "dpt_swin2_large_384":
-        net_w, net_h = 384, 384
+        # net_w, net_h = 384, 384
+        net_w, net_h = 256, 256
         keep_aspect_ratio = False
         resize_mode = "minimal"
         normalization = NormalizeImage(
@@ -185,7 +186,8 @@ def load_transforms(
         )
 
     elif model_type == "dpt_swin2_base_384":
-        net_w, net_h = 384, 384
+        # net_w, net_h = 384, 384
+        net_w, net_h = 256, 256
         keep_aspect_ratio = False
         resize_mode = "minimal"
         normalization = NormalizeImage(
@@ -201,7 +203,8 @@ def load_transforms(
         )
 
     elif model_type == "dpt_swin_large_384":
-        net_w, net_h = 384, 384
+        # net_w, net_h = 384, 384
+        net_w, net_h = 256, 256
         keep_aspect_ratio = False
         resize_mode = "minimal"
         normalization = NormalizeImage(

@@ -1,6 +1,5 @@
 """
 PatchWise training, SOccDPT
-author: Aditya NG (adityang5@gmail.com)
 """
 import math
 

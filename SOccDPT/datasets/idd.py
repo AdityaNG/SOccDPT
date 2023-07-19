@@ -22,7 +22,7 @@ default_depth_path = os.path.join(DEFAULT_DATASET_BASE, "depth/train/0/")
 
 class IDD_Segmentation(Dataset):
     """
-    Bengaluru Depth Dataset
+    Indrian Driving Dataset
         RGB data
         Boosted depth
     """
@@ -69,11 +69,95 @@ class IDD_Segmentation(Dataset):
         return [x, x_raw, mask, y]
 
 
+class IDD_Depth_Segmentation(Dataset):
+    """
+    Indrian Driving Dataset
+        RGB data
+        Boosted depth
+    """
+
+    def __init__(
+        self,
+        leftImg8bit_path=default_leftImg8bit_path,
+        gtFine_path=default_gtFine_path,
+        depth_path=default_depth_path,
+        level_id="level1Ids",
+        level_2_class=level1_to_class,
+        transform=None,
+    ):
+        super().__init__()
+        self.idd = IDD_Dataset(
+            leftImg8bit_path=leftImg8bit_path,
+            gtFine_path=gtFine_path,
+            depth_path=depth_path,
+            level_id=level_id,
+            level_2_class=level_2_class,
+        )
+        assert transform is not None
+        self.img_transform = transform
+
+    def __len__(self):
+        return len(self.idd)
+
+    def __getitem__(self, frame_index):
+        # leftImg8bit, seg_map, depth = self.idd[frame_index]
+        rgb_frame, seg_frame_bool, depth = self.idd[frame_index]
+
+        # rgb_frame = leftImg8bit
+        # seg_frame_bool = seg_map
+
+        x = self.img_transform({"image": rgb_frame})["image"]
+        x = torch.from_numpy(x).unsqueeze(0)
+        x_raw = torch.tensor(rgb_frame).unsqueeze(
+            0
+        )  # Image used for visualization
+        y_seg = torch.tensor(seg_frame_bool).unsqueeze(0)
+        y_seg = y_seg.permute(0, 3, 1, 2)  # Channels first
+        mask_seg = torch.ones_like(y_seg, dtype=torch.bool)
+
+        y_disp = torch.tensor(depth).unsqueeze(0)
+        # y_disp = y_disp.permute(0, 3, 1, 2)  # Channels first
+        mask_disp = torch.ones_like(y_disp, dtype=torch.bool)
+
+        return [x, x_raw, mask_disp, y_disp, mask_seg, y_seg]
+
+
 def get_all_IDD_Segmentation_datasets(
     transform,
     level_id="level1Ids",
     level_2_class=level1_to_class,
+    idd_dataset_path=IDD_DATASET_PATH,
 ):
+    return get_all_IDD_datasets(
+        transform, IDD_Segmentation, level_id, level_2_class, idd_dataset_path
+    )
+
+
+def get_all_IDD_Depth_Segmentation_datasets(
+    transform,
+    level_id="level1Ids",
+    level_2_class=level1_to_class,
+    idd_dataset_path=IDD_DATASET_PATH,
+):
+    return get_all_IDD_datasets(
+        transform,
+        IDD_Depth_Segmentation,
+        level_id,
+        level_2_class,
+        idd_dataset_path,
+    )
+
+
+def get_all_IDD_datasets(
+    transform,
+    IDD_Dataset_class,
+    level_id="level1Ids",
+    level_2_class=level1_to_class,
+    idd_dataset_path=IDD_DATASET_PATH,
+):
+    assert issubclass(IDD_Dataset_class, IDD_Segmentation) or issubclass(
+        IDD_Dataset_class, IDD_Depth_Segmentation
+    ), "Invalid class input"
     # train_folders, val_folders, test_folders = get_train_val_test_folders()
     train_folders, val_folders, _ = get_train_val_test_folders()
     train_datasets = []
@@ -82,15 +166,15 @@ def get_all_IDD_Segmentation_datasets(
 
     for folder in train_folders:
         train_datasets.append(
-            IDD_Segmentation(
+            IDD_Dataset_class(
                 leftImg8bit_path=os.path.join(
-                    IDD_DATASET_PATH, "leftImg8bit", "train", folder
+                    idd_dataset_path, "leftImg8bit", "train", folder
                 ),
                 gtFine_path=os.path.join(
-                    IDD_DATASET_PATH, "gtFine", "train", folder
+                    idd_dataset_path, "gtFine", "train", folder
                 ),
                 depth_path=os.path.join(
-                    IDD_DATASET_PATH, "depth", "train", folder
+                    idd_dataset_path, "depth", "train", folder
                 ),
                 transform=transform,
                 level_id=level_id,
@@ -100,7 +184,7 @@ def get_all_IDD_Segmentation_datasets(
 
     for folder in val_folders:
         val_datasets.append(
-            IDD_Segmentation(
+            IDD_Dataset_class(
                 leftImg8bit_path=os.path.join(
                     IDD_DATASET_PATH, "leftImg8bit", "val", folder
                 ),

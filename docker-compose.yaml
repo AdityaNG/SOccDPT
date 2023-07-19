@@ -1,8 +1,9 @@
-version: "1.0"
+version: "3.9"
 services:
   dev:
     # Will build ./docker/Dockerfile
     # This Dockerfile is for GPU based development
+
     build:
       context: .
       dockerfile: ./docker/Dockerfile
@@ -13,6 +14,7 @@ services:
       - ~/.config:/root/.config
       - ~/.bash_history:/root/.bash_history
       - ~/.netrc:/root/.netrc
+      - ~/Datasets:/root/Datasets
     deploy:
       resources:
         reservations:

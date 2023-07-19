@@ -270,7 +270,9 @@ class BengaluruOccupancyDatasetIterator(BengaluruDepthDatasetIterator):
         depth = depth.astype(np.float32)
 
         hide_mask = np.zeros((self.height, self.width), dtype=bool)
-        hide_mask[0 : depth.shape[0] // 2 :,] = True
+        hide_mask[
+            0 : depth.shape[0] // 2 :,
+        ] = True
         depth[hide_mask] = float("inf")
 
         U, V = np.ix_(

@@ -1,0 +1,83 @@
+{
+    "method": "random",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          15
+        ]
+      },
+      "batch_size": {
+        "values": [
+          4
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.95
+        ]
+      },
+      "patchwise_percentage": {
+        "values": [
+          0.5
+        ]
+      },
+      "dataset_percentage": {
+        "values": [
+          0.25
+        ]
+      },
+      "loss_weights": {
+        "values": [
+          [1.0, 0.0],
+          [0.75, 0.25],
+          [0.5, 0.5],
+          [0.25, 0.75]
+        ]
+      },
+      "compute_scale_and_shift": {
+        "values": [
+          false
+        ]
+      },
+      "load": {
+        "values": [
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/9wltqnkb/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/to209gpm/checkpoint_epoch15.pth",
+
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/qay53yov/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/1ylk1phx/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/z6q2qcmr/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/q0kbdqw5/checkpoint_epoch15.pth"
+        ]
+      }
+    }
+  }

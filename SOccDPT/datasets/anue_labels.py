@@ -582,6 +582,7 @@ class_to_level3 = {}
 for k, v in level3_to_class.items():
     class_to_level3[v] = k
 
+LEVEL1_ID = "level1Ids"
 level1_to_class = {
     0: 0,
     1: 1,
@@ -626,6 +627,7 @@ for label in labels:
 
 
 # Level4_road to class
+LEVEL4_ID = "level4Ids"
 level4_road_to_class = {
     0: 0,  # road
     1: 1,  # parking
@@ -687,7 +689,6 @@ class IDD_Dataset:
 
         self.level_id = level_id
         self.level_2_class = level_2_class
-        # self.num_classes = len(self.level_2_class.keys())
         self.classes = set(self.level_2_class.values())
         self.num_classes = len(self.classes)
 
@@ -719,7 +720,8 @@ class IDD_Dataset:
             for f in self.files
         ]
         self.depth_files = [
-            os.path.join(depth_path, f + "_depth.png") for f in self.files
+            os.path.join(depth_path, f + "_leftImg8bit.png")
+            for f in self.files
         ]
 
         for i in range(len(self.files)):
@@ -729,6 +731,9 @@ class IDD_Dataset:
             assert os.path.isfile(self.gtFine_files[i]), (
                 "File not found: " + self.gtFine_files[i]
             )
+            assert os.path.isfile(self.depth_files[i]), (
+                "File not found: " + self.depth_files[i]
+            )
 
     def __len__(self):
         return len(self.files)
@@ -736,10 +741,15 @@ class IDD_Dataset:
     def __getitem__(self, index):
         leftImg8bit = cv2.imread(self.leftImg8bit_files[index])
         gtFine = cv2.imread(self.gtFine_files[index])
-        # depth = cv2.imread(self.depth_files[index])
-        depth = np.zeros(
-            (leftImg8bit.shape[0], leftImg8bit.shape[1]), dtype=np.uint8
-        )
+        depth = cv2.imread(self.depth_files[index])
+
+        # if depth is rgb, convert to grayscale
+        if len(depth.shape) == 3:
+            depth = cv2.cvtColor(depth, cv2.COLOR_BGR2GRAY)
+
+        # depth = np.zeros(
+        #     (leftImg8bit.shape[0], leftImg8bit.shape[1]), dtype=np.uint8
+        # )
 
         leftImg8bit = cv2.resize(leftImg8bit, (1920, 1080))
         gtFine = cv2.resize(gtFine, (1920, 1080))

@@ -1,5 +1,3 @@
-from typing import Type
-
 import cv2
 import matplotlib as mpl
 import numpy as np
@@ -9,7 +7,8 @@ import wandb
 from tqdm import tqdm
 
 from ..loss.ssi_loss import compute_scale_and_shift
-from ..model.SOccDPT import DepthNet, SegNet, SOccDPT
+
+# from ..model.SOccDPT import DepthNet, SegNet, SOccDPT
 from ..model.blocks import Interpolate
 
 
@@ -354,9 +353,9 @@ def color_by_index(
 
 ##############################################################
 def evaluate(
-    net: Type[SOccDPT],
-    seg_wrapper: Type[SegNet],
-    disp_wrapper: Type[DepthNet],
+    net,  # Type[SOccDPT]
+    seg_wrapper,  # Type[SegNet]
+    disp_wrapper,  # Type[DepthNet]
     val_set,
     device,
     amp,

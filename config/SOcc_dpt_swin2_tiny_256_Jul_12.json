@@ -1,0 +1,85 @@
+{
+    "method": "random",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          15
+        ]
+      },
+      "batch_size": {
+        "values": [
+          5
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.95
+        ]
+      },
+      "patchwise_percentage": {
+        "values": [
+          0.5
+        ]
+      },
+      "dataset_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "loss_weights": {
+        "values": [
+          [1.0, 0.0],
+          [0.0, 1.0],
+          [0.75, 0.25],
+          [0.25, 0.75]
+        ]
+      },
+      "load": {
+        "values": [
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/qay53yov/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/1ylk1phx/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/z6q2qcmr/checkpoint_epoch15.pth",
+          "checkpoints_pretrained/SOcc_dpt_swin2_tiny_256/q0kbdqw5/checkpoint_epoch15.pth"
+        ]
+      },
+      "load_depth": {
+        "values": [
+          false
+        ]
+      },
+      "load_seg": {
+        "values": [
+          false
+        ]
+      }
+    }
+  }

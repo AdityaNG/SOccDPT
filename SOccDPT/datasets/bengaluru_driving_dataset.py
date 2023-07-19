@@ -13,7 +13,7 @@ from .bdd_helper import (
 )
 
 
-class OCTraN_Dataset(BengaluruDepthDatasetIterator):
+class BDD_Dataset(BengaluruDepthDatasetIterator):
     def __init__(
         self,
         dataset_path: str = DEFAULT_DATASET,
@@ -24,11 +24,11 @@ class OCTraN_Dataset(BengaluruDepthDatasetIterator):
         assert transform is not None
         self.img_transform = transform
 
-    def __getitem__(self, frame_index: int):
-        assert False, "Not implemented"
+    # def __getitem__(self, frame_index: int):
+    #     assert False, "Not implemented"
 
 
-class OCTraN_Depth(OCTraN_Dataset):
+class BDD_Depth(BDD_Dataset):
     """
     Bengaluru Depth Dataset
         RGB data
@@ -75,7 +75,7 @@ def rgb_seg_to_bool(seg_frame):
     return seg_frame_bool
 
 
-class OCTraN_Segmentation(OCTraN_Dataset):
+class BDD_Segmentation(BDD_Dataset):
     """
     Bengaluru Depth Dataset
         RGB data
@@ -100,7 +100,7 @@ class OCTraN_Segmentation(OCTraN_Dataset):
         return [x, x_raw, mask, y]
 
 
-class OCTraN_Depth_Segmentation(OCTraN_Dataset):
+class BDD_Depth_Segmentation(BDD_Dataset):
     """
     Bengaluru Depth Dataset
         RGB data
@@ -137,7 +137,7 @@ class OCTraN_Depth_Segmentation(OCTraN_Dataset):
 
 
 def get_bdd_dataset(
-    OCTraN_Dataset: Type[OCTraN_Dataset],
+    BDD_Dataset: Type[BDD_Dataset],
     transform: torchvision.transforms.Compose,
     base_path: str,
 ) -> torch.utils.data.ConcatDataset:
@@ -145,27 +145,27 @@ def get_bdd_dataset(
     dataset = torch.utils.data.ConcatDataset(
         [
             # List of datasets
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1653972957447"),
                 transform=transform,
             ),
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1652937970859"),
                 transform=transform,
             ),
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1654493684259"),
                 transform=transform,
             ),
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1654507149598"),
                 transform=transform,
             ),
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1658384707877"),
                 transform=transform,
             ),
-            OCTraN_Dataset(
+            BDD_Dataset(
                 dataset_path=os.path.join(base_path, "1658384924059"),
                 transform=transform,
             ),

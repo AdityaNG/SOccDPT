@@ -8,7 +8,7 @@ class BaseModel(torch.nn.Module):
         Args:
             path (str): file path
         """
-        if path is None:
+        if path is None or not path:
             # No model to load
             return
         parameters = torch.load(path, map_location=torch.device("cpu"))
@@ -16,6 +16,14 @@ class BaseModel(torch.nn.Module):
         if "optimizer" in parameters:
             print("Loading optimizer state dict")
             parameters = parameters["model"]
+
+        # validate all keys in state_dict are present in self.state_dict()
+        for k in parameters:
+            if k not in self.state_dict():
+                raise Exception(
+                    "Loading: {self.__class__.__name__} state_dict does not \
+                        contain key {k} when loading from {path}"
+                )
 
         incompatible_keys = self.load_state_dict(
             parameters,

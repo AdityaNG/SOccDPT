@@ -1,0 +1,56 @@
+{
+    "method": "grid",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          30
+        ]
+      },
+      "batch_size": {
+        "values": [
+          6
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001,
+            0.000002,
+            0.0000003
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.1
+        ]
+      },
+      "load": {
+        "values": [
+          false
+        ]
+      }
+    }
+  }
