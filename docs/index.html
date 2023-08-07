@@ -1,0 +1,308 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <!-- ======================================================================= -->
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style type="text/css">
+      body {
+      font-family: "Titillium Web","HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      font-weight:300;
+      font-size:18px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 1100px;
+      }
+      h1 {
+      font-weight:300;
+      }
+      .disclaimerbox {
+      background-color: #eee;
+      border: 1px solid #eeeeee;
+      border-radius: 10px ;
+      -moz-border-radius: 10px ;
+      -webkit-border-radius: 10px ;
+      padding: 20px;
+      }
+      video.header-vid {
+      height: 140px;
+      border: 1px solid black;
+      border-radius: 10px ;
+      -moz-border-radius: 10px ;
+      -webkit-border-radius: 10px ;
+      }
+      img.header-img {
+      height: 140px;
+      border: 1px solid black;
+      border-radius: 10px ;
+      -moz-border-radius: 10px ;
+      -webkit-border-radius: 10px ;
+      }
+      img.rounded {
+      border: 1px solid #eeeeee;
+      border-radius: 10px ;
+      -moz-border-radius: 10px ;
+      -webkit-border-radius: 10px ;
+      }
+      a:link,a:visited
+      {
+      color: #1367a7;
+      text-decoration: none;
+      }
+      a:hover {
+      color: #208799;
+      }
+      td.dl-link {
+      height: 160px;
+      text-align: center;
+      font-size: 22px;
+      }
+      .layered-paper-big { /* modified from: http://css-tricks.com/snippets/css/layered-paper/ */
+      box-shadow:
+      0px 0px 1px 1px rgba(0,0,0,0.35), /* The top layer shadow */
+      5px 5px 0 0px #fff, /* The second layer */
+      5px 5px 1px 1px rgba(0,0,0,0.35), /* The second layer shadow */
+      10px 10px 0 0px #fff, /* The third layer */
+      10px 10px 1px 1px rgba(0,0,0,0.35), /* The third layer shadow */
+      15px 15px 0 0px #fff, /* The fourth layer */
+      15px 15px 1px 1px rgba(0,0,0,0.35), /* The fourth layer shadow */
+      20px 20px 0 0px #fff, /* The fifth layer */
+      20px 20px 1px 1px rgba(0,0,0,0.35), /* The fifth layer shadow */
+      25px 25px 0 0px #fff, /* The fifth layer */
+      25px 25px 1px 1px rgba(0,0,0,0.35); /* The fifth layer shadow */
+      margin-left: 10px;
+      margin-right: 45px;
+      }
+      .layered-paper { /* modified from: http://css-tricks.com/snippets/css/layered-paper/ */
+      box-shadow:
+      0px 0px 1px 1px rgba(0,0,0,0.35), /* The top layer shadow */
+      5px 5px 0 0px #fff, /* The second layer */
+      5px 5px 1px 1px rgba(0,0,0,0.35), /* The second layer shadow */
+      10px 10px 0 0px #fff, /* The third layer */
+      10px 10px 1px 1px rgba(0,0,0,0.35); /* The third layer shadow */
+      margin-top: 5px;
+      margin-left: 10px;
+      margin-right: 30px;
+      margin-bottom: 5px;
+      }
+      .vert-cent {
+      position: relative;
+      top: 50%;
+      transform: translateY(-50%);
+      }
+      hr
+      {
+      border: 0;
+      height: 1px;
+      background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+      }
+      #authors td {
+      padding-bottom:5px;
+      padding-top:30px;
+      }
+    </style>
+    <!-- ======================================================================= -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'UA-114291442-5');
+    </script>
+    <script type="text/javascript" src="./index_files/hidebib.js"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>SOccDPT</title>
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="vsc-initialized">
+    <br>
+    <center><span style="font-size:44px;font-weight:bold;">SOccDPT: Semi-Supervised 3D Semantic Occupancy from Dense Predictive Transformers trained under memory constraints</span></center>
+    <br>
+    <table align="center" width="710px">
+      <tbody>
+        <tr>
+          <td align="center" width="230px">
+            <center><span style="font-size:22px"><a href="https://www.linkedin.com/in/adityang/" target="_blank">Aditya NG</a></span></center>
+          </td>
+        </tr>
+        <tr>
+        </tr>
+        <tr>
+        </tr>
+      </tbody>
+    </table>
+    <table align="center" width="700px">
+      <tbody>
+        <tr>
+          <td align="center" width="700px">
+            <center><span style="font-size:22px">Published at <a href="https://sites.google.com/view/nivt-iccv2023/home">ICCV's NIVT 2023</a> </span></center>
+          </td>
+        </tr>
+        <tr>
+        </tr>
+        <tr>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <table align="center" width="700px">
+      <tbody>
+        <tr>
+          <td align="center" width="100px">
+            <center><span style="font-size:28px"><a href="https://github.com/AdityaNG/SOccDPT">[Paper]</a></span></center>
+          </td>
+          <td align="center" width="100px">
+            <center><span style="font-size:28px"><a href="https://github.com/AdityaNG/SOccDPT">[Slides]</a></span></center>
+          </td>
+          <td align="center" width="100px">
+            <center><span style="font-size:28px"><a href="https://github.com/AdityaNG/SOccDPT">[Code]</a></span></center>
+          </td>
+        </tr>
+        <tr>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <table align="center" width="300px">
+      <tbody>
+        <tr>
+          <td align="center" width="300px">
+            <center><a href="./index_files/demo.gif"><img src="./index_files/demo.gif" height="450px"></a><br></center>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <div style="width:800px; margin:0 auto; text-align:justify">We present SOccDPT, a memory-efficient approach for 3D semantic occupancy prediction from monocular image input using dense predictive transformers. To address the limitations of existing methods trained on structured traffic datasets, we train our model on unstructured datasets including the Indian Driving Dataset and Bengaluru Driving Dataset. Our semi-supervised training pipeline allows SOccDPT to learn from datasets with limited labels by reducing the requirement for manual labelling and substituting it with pseudo-ground truth labels. This broader training enhances our model's ability to handle unstructured traffic scenarios effectively. To overcome memory limitations during training, we introduce patch-wise training where we select a subset of parameters to train each epoch, reducing memory usage during auto-grad graph construction. By considering unstructured traffic and introducing memory-constrained training, SOccDPT achieves a competitive performance as shown by semantic segmentation IoU score of 41.71% and monocular depth estimation RMSE score of 12.4075, even under limited memory constraints and operating at a competitive frequency of 47 Hz. We have made our code and dataset augmentations public.
+    </div>
+    <br>
+    <hr>
+    <center>
+      <h1>Our Architecture</h1>
+    </center>
+    <div style="width:800px; margin:0 auto; text-align:justify">SOccDPT uses the ViT family for backbone feature extraction which allows us to carefully balance accuracy and compute requirements. SOccDPT takes an RGB image input of shape 3x256x256 produces image features of shape 256x128x128. We then pass the extracted features to a disparity head and a segmentation head. We apply the Scale and Shift Invariant loss and the Binary Cross Entropy loss for the disparity and segmentation outputs respectively. With the known camera intrinsic, we project the semantics into 3D space with the help of the disparity map, thus producing a 3D semantic map from one backbone</div>
+    <br>
+    <p style="margin-top:4px;"></p>
+    <table align="center" width="1000px">
+      <tbody>
+        <tr>
+          <td width="1200px">
+            <center><a href="./index_files/arch.png"><img src="./index_files/arch.png" width="800px"></a><br></center>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr>
+    <center>
+      <h1>Short Demonstration</h1>
+    </center>
+    <table align="center" width="300px">
+      <tbody>
+        <tr>
+          <td align="center" width="300px">
+            <iframe width="768" height="480" src="https://www.youtube.com/embed/SmtqhvKftzg" title="SOccDPT Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr>
+    <center id="sourceCode">
+      <h1>Source Code</h1>
+    </center>
+    <div style="width:800px; margin:0 auto; text-align=center">
+      We have released the PyTorch implementation of SOccDPT on GitHub. Try our code!
+    </div>
+    <table align="center" width="900px">
+      <tbody>
+        <tr>
+          <td width="300px" align="center">
+            <span style="font-size:28px"><a href="https://github.com/AdityaNG/SOccDPT">[GitHub]</a></span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr>
+    <center>
+      <h1>Paper and Bibtex</h1>
+    </center>
+    <table align="center" width="850px">
+      <tbody>
+        <tr>
+          <td width="200px" align="left">
+            <a href="https://github.com/AdityaNG/SOccDPT"><img style="width:400px" src="./index_files/paper_SOccDPT.png"></a>
+            <center>
+              <span style="font-size:20pt">
+                <a href="https://github.com/AdityaNG/SOccDPT">[Paper]</a>
+              </span>
+            </center>
+          </td>
+          <td width="50px" align="center">
+          </td>
+          <td width="550px" align="left">
+            <p style="text-align:left;"><b><span style="font-size:20pt">Citation</span></b><br><span style="font-size:6px;">&nbsp;<br></span> <span style="font-size:15pt">TODO</span></p>
+            <span style="font-size:20pt"><a shape="rect" href="javascript:togglebib(&#39;assemblies19_bib&#39;)" class="togglebib">[Bibtex]</a></span>
+            <div class="paper" id="assemblies19_bib">
+              <pre xml:space="preserve" style="display: none;">@inproceedings{aditya2023soccdpt,
+  title={SOccDPT: Semi-Supervised 3D Semantic Occupancy from Dense Predictive Transformers trained under memory constraints},
+  author={Aditya},
+  booktitle={TODO},
+  year={2023}}
+                </pre>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td width="250px" align="left">
+          </td>
+          <td width="50px" align="center">
+          </td>
+          <td width="550px" align="left">
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr>
+    <center>
+      <h1>Related Projects</h1>
+    </center>
+    <table align="center" width="900px">
+      <tbody>
+        <tr>
+          <td align="center" width="300px">
+            <a href="https://www.linkedin.com/posts/adityang_cvpr2023-bengaluru-transformersforvision-activity-7076240486130208768-IKbN?utm_source=share&amp;utm_medium=member_desktop">OCTraN</a>
+            <center><a href="https://www.linkedin.com/posts/adityang_cvpr2023-bengaluru-transformersforvision-activity-7076240486130208768-IKbN?utm_source=share&amp;utm_medium=member_desktop"><img src="./index_files/paper_OCTraN.png" height="600px"></a><br></center>
+          </td>
+          <td align="center" width="300px">
+            <a href="https://www.linkedin.com/posts/adityang_low-cost-hardware-accelerated-vision-based-activity-7067379026075537408-XbFj?utm_source=share&amp;utm_medium=member_desktop">Hardware Accelerated Stereo Vision</a>
+            <center><a href="https://www.linkedin.com/posts/adityang_low-cost-hardware-accelerated-vision-based-activity-7067379026075537408-XbFj?utm_source=share&amp;utm_medium=member_desktop"><img src="./index_files/paper_stereo.png" height="600px"></a><br></center>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr>
+    <table align="center" width="800px">
+      <tbody>
+        <tr>
+          <td width="800px">
+            <left>
+              <center>
+                <h1>Say Hi!</h1>
+              </center>
+              Contact me at <a href="mailto:adityang5@gmail.com">adityang5@gmail.com</a>
+              <br>
+            </left>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br><br>
+    <script xml:space="preserve" language="JavaScript">
+      hideallbibs();
+    </script>
+  </body>
+</html>
