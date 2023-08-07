@@ -80,22 +80,6 @@ python3.9 -m SOccDPT.scripts.train_SOccDPT \
     --count 3 \
     --device cuda:0 \
     --sweep_json config/SOccDPT_V3_dpt_swin2_base_384_Jul_18.json
-
-# python3.9 -m SOccDPT.scripts.train_SOccDPT \
-#     --version 3 \
-#     --dataset idd \
-#     --model_type dpt_swin2_base_384 \
-#     --count 3 \
-#     --device cuda:0 \
-#     --sweep_json config/SOccDPT_V3_dpt_swin2_base_384_Jul_18.json
-
-# python3.9 -m SOccDPT.scripts.train_SOccDPT \
-#     --version 3 \
-#     --dataset idd \
-#     --model_type dpt_hybrid_384 \
-#     --count 3 \
-#     --device cuda:0 \
-#     --sweep_json config/SOccDPT_V3_dpt_hybrid_384_Jul_18.json
 ```
 
 Train v3 model on BDD dataset:
