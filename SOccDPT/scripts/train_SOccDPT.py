@@ -7,9 +7,13 @@ from ..datasets.idd import (
     get_all_IDD_Depth_Segmentation_datasets,
 )
 from ..datasets.anue_labels import (
-    LEVEL1_ID,
-    level1_to_class,
-    level1_to_color as class_2_color_idd,
+    # LEVEL1_ID,
+    # level1_to_class,
+    # level1_to_color as class_2_color_idd,
+
+    LEVEL4_BASICS_ID,
+    level4_basics_to_class,
+    level4_basics_to_color as class_2_color_idd,
 )
 from ..loss import (
     freeze_pretrained_encoder,
@@ -177,12 +181,12 @@ def train_net(
     if "idd" in dataset_name:
         train_datasets, val_datasets = get_all_IDD_Depth_Segmentation_datasets(
             transforms,
-            level_id=LEVEL1_ID,
-            level_2_class=level1_to_class,
+            level_id=LEVEL4_BASICS_ID,
+            level_2_class=level4_basics_to_class,
             # idd_dataset_path=IDD_DATASET_PATH,
         )
         dataset = train_datasets + val_datasets
-        classes = set(level1_to_class.values())
+        classes = set(level4_basics_to_class.values())
         num_classes = len(classes)
         class_2_color = class_2_color_idd
     elif "bdd" in dataset_name:
@@ -461,7 +465,7 @@ def main(args):
         sweep_config, project=project_name, entity="pw22-sbn-01"
     )
     print("sweep_id", sweep_id)
-    wandb.agent(sweep_id, function=train_net_wandb, count=1)
+    wandb.agent(sweep_id, function=train_net_wandb, count=args.count)
 
 
 if __name__ == "__main__":
@@ -475,6 +479,15 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="SOccDPT version",
+    )
+
+    # count
+    parser.add_argument(
+        "-n",
+        "--count",
+        default=1,
+        type=int,
+        help="Number of times to run the sweep",
     )
 
     parser.add_argument(

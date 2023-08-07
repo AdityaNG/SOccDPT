@@ -643,6 +643,83 @@ level4_road_to_color = {
     4: (152, 251, 152),  # non-drivable fallback
 }
 
+# level2IdName
+# ['drivable', 'non-drivable', 'living-thing', '2-wheeler', 'autorickshaw', 'car', 'large-vehicle', 'barrier', 'structures', 'construction', 'vegetation', 'sky', 'object fallback', 'void', 'vehicle']
+
+# Level4 basics
+LEVEL4_BASICS_ID = "level4Ids"
+# level4_basics_to_class = {
+#     # # 0: Non-Drivable
+#     # # 1: Vehicle
+#     # # 2: Living
+#     # # 3: Drivable
+# }
+
+# for label in labels:
+#     if label.level2IdName in [
+#         'non-drivable', 
+#     ]:
+#         level4_basics_to_class[label.level4Id] = 0
+#     elif label.level2IdName in [
+#         '2-wheeler', 'autorickshaw', 'car', 'large-vehicle', 'vehicle'
+#     ]:
+#         level4_basics_to_class[label.level4Id] = 1
+#     elif label.level2IdName in [
+#         'living-thing',
+#     ]:
+#         level4_basics_to_class[label.level4Id] = 2
+#     elif label.level2IdName in [
+#         'drivable',
+#     ]:
+#         level4_basics_to_class[label.level4Id] = 3
+#     elif label.level2IdName in [
+#         'barrier', 'structures', 'construction', 'vegetation',
+#     ]:
+#         level4_basics_to_class[label.level4Id] = 4
+
+# level4_basics_to_color = {
+#     0: (244, 35, 232),  # Non-Drivable
+#     1: (0, 0, 142),     # Vehicle
+#     2: (220, 20, 60),   # Living
+#     3: (128, 64, 128),  # Drivable
+#     4: (0, 255, 255),   # Barrier
+# }
+
+level4_basics_to_class = {
+    # # 0: Drivable
+    # # 1: Vehicle
+    # # 2: Living
+}
+
+for label in labels:
+    if label.level2IdName in [
+        'drivable', 
+    ]:
+        level4_basics_to_class[label.level4Id] = 0
+    elif label.level2IdName in [
+        '2-wheeler', 'autorickshaw', 'car', 'large-vehicle', 'vehicle'
+    ]:
+        level4_basics_to_class[label.level4Id] = 1
+    elif label.level2IdName in [
+        'living-thing',
+    ]:
+        level4_basics_to_class[label.level4Id] = 2
+
+
+level4_basics_to_color = {
+    0: (244, 35, 232),  # Non-Drivable
+    1: (0, 0, 142),     # Vehicle
+    2: (220, 20, 60),   # Living
+    3: (128, 64, 128),  # Drivable
+    4: (0, 255, 255),   # Barrier
+}
+
+# print("LEVEL4_BASICS_ID", LEVEL4_BASICS_ID)
+# print("level4_basics_to_class", level4_basics_to_class)
+# print("level4_basics_to_color", level4_basics_to_color)
+
+# exit()
+
 # --------------------------------------------------------------------------------
 # Create dictionaries for a fast lookup
 # --------------------------------------------------------------------------------
@@ -761,7 +838,10 @@ class IDD_Dataset:
             (gtFine.shape[0], gtFine.shape[1], self.num_classes), dtype=bool
         )
         for class_id in self.level_2_class:
-            seg_map[:, :, self.level_2_class[class_id]] = gtFine == class_id
+            seg_map[:, :, self.level_2_class[class_id]] = np.logical_or(
+                gtFine == class_id,
+                seg_map[:, :, self.level_2_class[class_id]]
+            )
 
         return leftImg8bit, seg_map, depth
 

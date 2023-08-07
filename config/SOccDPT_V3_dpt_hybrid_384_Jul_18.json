@@ -1,0 +1,86 @@
+{
+    "method": "grid",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          15
+        ]
+      },
+      "batch_size": {
+        "values": [
+          1
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.10
+        ]
+      },
+      "patchwise_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "loss_weights": {
+        "values": [
+          [0.75, 0.25],
+          [0.25, 0.75],
+          [0.5, 0.5]
+        ]
+      },
+      "dataset_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "load": {
+        "values": [
+          false
+        ]
+      },
+      "load_depth": {
+        "values": [
+          "weights/dpt_hybrid_kitti-cb926ef4.pt"
+        ]
+      },
+      "load_seg": {
+        "values": [
+          false
+        ]
+      },
+      "compute_scale_and_shift": {
+        "values": [
+          true
+        ]
+      }
+    }
+  }

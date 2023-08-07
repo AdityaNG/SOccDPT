@@ -22,7 +22,9 @@ class BaseModel(torch.nn.Module):
             if k not in self.state_dict():
                 raise Exception(
                     "Loading: {self.__class__.__name__} state_dict does not \
-                        contain key {k} when loading from {path}"
+                        contain key {k} when loading from {path}".format(
+                            self=self, k=k, path=path
+                        )
                 )
 
         incompatible_keys = self.load_state_dict(

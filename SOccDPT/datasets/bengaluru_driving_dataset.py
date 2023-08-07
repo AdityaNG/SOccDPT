@@ -57,7 +57,7 @@ def normalize(mat):
 
 color_2_class = {
     (0, 0, 0): 0,  # Background, black
-    (0, 0, 142.0): 1,  # Vehicle, red
+    (0, 0, 142): 1,  # Vehicle, red
     (220, 20, 60): 2,  # Pedeastrian, blue
 }
 class_2_color = {v: k for k, v in color_2_class.items()}

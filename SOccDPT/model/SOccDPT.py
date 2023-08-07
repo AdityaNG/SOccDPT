@@ -199,7 +199,7 @@ class SOccDPT(BaseModel):
         segmentation = torch.nn.functional.interpolate(
             segmentation,
             size=(self.height, self.width),
-            mode="nearest-exact",
+            mode="nearest",  # nearest-exact
         ).squeeze()
 
         if len(inv_depth.shape) == 2:
