@@ -115,7 +115,7 @@ python3.9 -m SOccDPT.scripts.export_SOccDPT --version 3 \
     --export_path onnx/SOccDPT_idd.onnx
 ```
 
-Run
+un
 ```bash
 python3.9 -m SOccDPT.scripts.run_SOccDPT \
     --dataset bdd \
@@ -126,4 +126,20 @@ python3.9 -m SOccDPT.scripts.run_SOccDPT \
     --dataset idd \
     --model_type dpt_swin2_tiny_256 \
     --load onnx/SOccDPT_idd.onnx
+```
+
+# Evaluate Models
+
+```bash
+python3.9 -m SOccDPT.scripts.visual_SOccDPT \
+    --version 3 \
+    --dataset bdd \
+    --model_type dpt_swin2_tiny_256 \
+    --load checkpoints_pretrained/SOccDPT_V3_dpt_swin2_tiny_256_bdd/qmjmgfu1/checkpoint_epoch_15.pth
+
+python3.9 -m SOccDPT.scripts.visual_SOccDPT \
+    --version 3 \
+    --dataset idd \
+    --model_type dpt_swin2_tiny_256 \
+    --load checkpoints_pretrained/SOccDPT_V3_dpt_swin2_tiny_256_idd/cq3j88p0/checkpoint_epoch_15.pth
 ```

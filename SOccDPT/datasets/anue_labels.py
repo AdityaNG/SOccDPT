@@ -657,7 +657,7 @@ LEVEL4_BASICS_ID = "level4Ids"
 
 # for label in labels:
 #     if label.level2IdName in [
-#         'non-drivable', 
+#         'non-drivable',
 #     ]:
 #         level4_basics_to_class[label.level4Id] = 0
 #     elif label.level2IdName in [
@@ -693,7 +693,7 @@ level4_basics_to_class = {
 
 for label in labels:
     if label.level2IdName in [
-        'drivable', 
+        'drivable',
     ]:
         level4_basics_to_class[label.level4Id] = 0
     elif label.level2IdName in [

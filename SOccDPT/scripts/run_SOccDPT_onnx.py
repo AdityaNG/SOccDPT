@@ -13,7 +13,7 @@ from ..datasets.anue_labels import (
 )
 from ..model.loader import load_transforms
 from ..model.SOccDPT import model_types
-from onnxruntime.quantization import quantize_dynamic, QuantType
+from onnxruntime.quantization import quantize_dynamic
 
 import os
 import cv2
@@ -60,11 +60,10 @@ def run_net(
     # To enable model serialization after graph optimization set this
     # sess_options.optimized_model_filepath = "{}.opt.onnx".format(load)
     sess_options.optimized_model_filepath = model_quant
-    
 
     net = ort.InferenceSession(load, sess_options, providers=providers)
     # net = ort.InferenceSession(model_quant, sess_options, providers=providers)
-    
+
     # net = ort.InferenceSession(
     #   model_quant, sess_options, providers=providers
     # )
