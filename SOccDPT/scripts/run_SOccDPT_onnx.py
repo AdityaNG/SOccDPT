@@ -162,7 +162,7 @@ def run_net(
         cv2.imwrite("test.png", vis_img)
         # break
 
-    N = 30
+    N = 50
     start = time.time()
     for _ in range(N):
         _ = net.run(None, {"input": x})

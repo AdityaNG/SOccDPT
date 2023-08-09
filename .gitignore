@@ -119,6 +119,6 @@ output_monodepth/
 output_semseg/
 checkpoints_pretrained/
 onnx/
-visuals
+visuals/
 
 core

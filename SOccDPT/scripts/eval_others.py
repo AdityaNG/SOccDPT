@@ -142,9 +142,6 @@ class OtherModelWrapper(SOccDPT):
             self.encoder = self._model.encoder
             self.depth_decoder = self._model.depth_decoder
 
-            self.pose_enc = self._model.pose_enc
-            self.pose_dec = self._model.pose_dec
-
             def identity_transform(x):
                 resized = cv2.resize(x['image'], (1024, 320))
                 return {'image': resized}
@@ -160,6 +157,9 @@ class OtherModelWrapper(SOccDPT):
 
             self.encoder = self._model.encoder
             self.depth_decoder = self._model.depth_decoder
+
+            self.pose_enc = self._model.pose_enc
+            self.pose_dec = self._model.pose_dec
 
             def identity_transform(x):
                 resized = cv2.resize(x['image'], (1024, 320))
@@ -389,7 +389,7 @@ def main(args):
     frame_count = 50
     start_time = time.time()
     for _ in range(frame_count):
-        y_disp_pred, y_seg_pred, points = net(x)
+        _ = net(x)
     end_time = time.time()
 
     print(

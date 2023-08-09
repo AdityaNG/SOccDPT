@@ -115,14 +115,14 @@ python3.9 -m SOccDPT.scripts.export_SOccDPT --version 3 \
     --export_path onnx/SOccDPT_idd.onnx
 ```
 
-un
+Run
 ```bash
-python3.9 -m SOccDPT.scripts.run_SOccDPT \
+python3.9 -m SOccDPT.scripts.run_SOccDPT_onnx \
     --dataset bdd \
     --model_type dpt_swin2_tiny_256 \
     --load onnx/SOccDPT.onnx
 
-python3.9 -m SOccDPT.scripts.run_SOccDPT \
+python3.9 -m SOccDPT.scripts.run_SOccDPT_onnx \
     --dataset idd \
     --model_type dpt_swin2_tiny_256 \
     --load onnx/SOccDPT_idd.onnx
@@ -162,4 +162,6 @@ python3.9 -m SOccDPT.scripts.eval_others \
 python3.9 -m SOccDPT.scripts.eval_others \
     --dataset bdd \
     --model_type manydepth
+
+python3.9 -m SOccDPT.scripts.eval_timing
 ```

@@ -8,15 +8,17 @@ def eval_net(net: torch.nn.Module, input_tensor: torch.tensor, N: int = 50):
     net.eval()
 
     # for _ in tqdm(range(N)):
+    torch.cuda.synchronize()
+    start_time = torch.cuda.Event(enable_timing=True)
+    end_time = torch.cuda.Event(enable_timing=True)
+    start_time.record()
+
     for _ in range(N):
-        torch.cuda.synchronize()
-        start_time = torch.cuda.Event(enable_timing=True)
-        end_time = torch.cuda.Event(enable_timing=True)
-        start_time.record()
         _ = net(input_tensor)
-        end_time.record()
-        torch.cuda.synchronize()
-        elapsed_time_ms = start_time.elapsed_time(end_time)
+
+    end_time.record()
+    torch.cuda.synchronize()
+    elapsed_time_ms = start_time.elapsed_time(end_time)
 
     fps = 1000.0 / elapsed_time_ms  # Frames per second
 
@@ -138,5 +140,5 @@ def eval_SOccDPT(device):
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # eval_midas(device)
-    eval_SOccDPT(device)
+    eval_midas(device)
+    # eval_SOccDPT(device)

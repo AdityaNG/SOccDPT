@@ -71,6 +71,7 @@ def main(args):
     # Load net
     model_kwargs = dict(
         num_classes=num_classes,
+        # point_compute_method='numpy',
     )
     if SOccDPT_version == 1:
         model_kwargs["load_depth"] = load_depth
@@ -230,7 +231,7 @@ def main(args):
     frame_count = 50
     start_time = time.time()
     for _ in range(frame_count):
-        y_disp_pred, y_seg_pred, points = net(x)
+        _ = net(x)
     end_time = time.time()
 
     print(
