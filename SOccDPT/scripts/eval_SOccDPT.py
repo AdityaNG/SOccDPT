@@ -3,8 +3,7 @@ import os
 import torch
 from torch.utils.data import random_split
 
-from ..model.loader import load_model
-from ..model.SOccDPT import SOccDPT_versions, model_types
+from ..utils import evaluate
 
 from ..datasets.bengaluru_driving_dataset import (
     BDD_Depth_Segmentation,
@@ -25,11 +24,13 @@ from ..datasets.anue_labels import (
 )
 from ..model.loader import load_model, load_transforms
 from ..model.SOccDPT import SOccDPT_versions, model_types
+from ..model.SOccDPT import DepthNet , SegNet
 
 import numpy as np
 import random
 import cv2
 from tqdm import tqdm
+import time
 
 
 @torch.no_grad()
@@ -153,7 +154,7 @@ def main(args):
     pred_seg_path = os.path.join(visual_path, "Pred_Seg")
     os.makedirs(pred_seg_path, exist_ok=True)
 
-    for index, batch in tqdm(enumerate(dataset)):
+    for index, batch in tqdm(enumerate(dataset), total=len(dataset)):
         x, x_raw, mask_disp, y_disp, mask_seg, y_seg = batch
         x = x.to(device=device, dtype=torch.float32)
         y_disp = y_disp.to(device=device, dtype=torch.float32)
@@ -223,6 +224,57 @@ def main(args):
             disp_img[class_mask] = class_color
         frame_seg_path = os.path.join(pred_seg_path, file_name)
         cv2.imwrite(frame_seg_path, disp_img)
+
+    ###################################################
+    # Eval Model FPS
+    frame_count = 50
+    start_time = time.time()
+    for _ in range(frame_count):
+        y_disp_pred, y_seg_pred, points = net(x)
+    end_time = time.time()
+
+    print(
+        f"FPS: \
+            {frame_count / (end_time - start_time):.2f} \
+            ({frame_count} frames in \
+            {(end_time - start_time):.2f} seconds)"
+    )
+    ###################################################
+
+    class DummyExpt:
+        def log(self, *args, **kwargs):
+            pass
+
+    disp_wrapper = DepthNet(net)
+    seg_wrapper = SegNet(net)
+    amp = False
+    val_set = dataset
+    loss = torch.tensor(0.0)
+    lr = 0.0
+    global_step = 0.0
+    epoch = 0
+    experiment = DummyExpt()
+
+    evaluate(
+        net,
+        seg_wrapper,
+        disp_wrapper,
+        val_set,
+        device,
+        amp,
+        x_raw,
+        y_disp,
+        y_disp_pred,
+        y_seg,
+        y_seg_pred,
+        points,
+        class_2_color,
+        loss,
+        lr,
+        global_step,
+        epoch,
+        experiment,
+    )
 
 
 if __name__ == "__main__":

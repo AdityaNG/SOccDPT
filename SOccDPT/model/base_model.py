@@ -39,4 +39,8 @@ class BaseModel(torch.nn.Module):
     def get_device(
         self,
     ):
-        return next(self.parameters()).device
+        try:
+            return next(self.parameters()).device
+        except Exception as ex:
+            print('No device found, using CPU', ex)
+            return torch.device("cpu")

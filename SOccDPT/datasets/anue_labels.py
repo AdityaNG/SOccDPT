@@ -644,7 +644,23 @@ level4_road_to_color = {
 }
 
 # level2IdName
-# ['drivable', 'non-drivable', 'living-thing', '2-wheeler', 'autorickshaw', 'car', 'large-vehicle', 'barrier', 'structures', 'construction', 'vegetation', 'sky', 'object fallback', 'void', 'vehicle']
+# [
+#     'drivable',
+#     'non-drivable',
+#     'living-thing',
+#     '2-wheeler',
+#     'autorickshaw',
+#     'car',
+#     'large-vehicle',
+#     'barrier',
+#     'structures',
+#     'construction',
+#     'vegetation',
+#     'sky',
+#     'object fallback',
+#     'void',
+#     'vehicle'
+# ]
 
 # Level4 basics
 LEVEL4_BASICS_ID = "level4Ids"

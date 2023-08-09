@@ -400,6 +400,9 @@ def evaluate(
         a3,
     )
 
+    if len(y_disp_pred.shape) == 2:
+        y_disp_pred = [y_disp_pred, ]
+
     disp_img = y_disp_pred[0].detach().squeeze().cpu().numpy()
     disp_img = (disp_img - np.min(disp_img)) / (
         np.max(disp_img) - np.min(disp_img)
@@ -426,6 +429,9 @@ def evaluate(
     iou = evaluate_seg(seg_wrapper, val_set, device, amp=amp)
 
     print("iou", iou)
+
+    if len(y_seg_pred.shape) == 3:
+        y_seg_pred = [y_seg_pred]
 
     disp_img_masks = (
         y_seg_pred[0].permute(1, 2, 0).detach().squeeze().cpu().numpy()

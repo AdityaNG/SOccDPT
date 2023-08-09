@@ -10,6 +10,7 @@ RUN apt-get update
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y software-properties-common gcc
 RUN apt-get install -y python3.9 python3.9-dev python3.9-distutils python3-pip python3-apt python3.9-venv
+RUN apt-get install -y git
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
 
 # RUN /usr/bin/python3.9 -m pip install --upgrade pip

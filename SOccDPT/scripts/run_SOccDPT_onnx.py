@@ -13,7 +13,6 @@ from ..datasets.anue_labels import (
 )
 from ..model.loader import load_transforms
 from ..model.SOccDPT import model_types
-from onnxruntime.quantization import quantize_dynamic
 
 import os
 import cv2
@@ -46,9 +45,9 @@ def run_net(
         # 'CPUExecutionProvider',
     ]
 
-    model_fp32 = load
+    # model_fp32 = load
     model_quant = "{}.dynanic_quant.onnx".format(load)
-    quantized_model = quantize_dynamic(model_fp32, model_quant)
+    # quantized_model = quantize_dynamic(model_fp32, model_quant)
 
     sess_options = ort.SessionOptions()
 
@@ -62,11 +61,6 @@ def run_net(
     sess_options.optimized_model_filepath = model_quant
 
     net = ort.InferenceSession(load, sess_options, providers=providers)
-    # net = ort.InferenceSession(model_quant, sess_options, providers=providers)
-
-    # net = ort.InferenceSession(
-    #   model_quant, sess_options, providers=providers
-    # )
 
     # 1. Create dataset
     transforms, _, _ = load_transforms(

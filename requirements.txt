@@ -5,3 +5,5 @@ timm==0.4.5
 black==23.7.0
 mypy==1.4.1
 flake8==6.0.0
+monodepth2==1.0.0
+manydepth @ git+https://github.com/PW22-SBN-01/manydepth@pip-module
