@@ -1,3 +1,5 @@
+import os
+import sys
 import cv2
 import matplotlib as mpl
 import numpy as np
@@ -6,10 +8,28 @@ import torch.nn as nn
 import wandb
 from tqdm import tqdm
 
+
 from ..loss.ssi_loss import compute_scale_and_shift
 
 # from ..model.SOccDPT import DepthNet, SegNet, SOccDPT
 from ..model.blocks import Interpolate
+
+
+class DummyWandB:
+    def log(self, *args, **kwargs):
+        pass
+
+
+def blockPrint():
+    # Disable printing
+    sys.stdout = open(os.devnull, "w")
+    # sys.stderr = open(os.devnull, "w")
+
+
+def enablePrint():
+    # Restore printing
+    sys.stdout = sys.__stdout__
+    # sys.stderr = sys.__stderr__
 
 
 def color_segmentation(disp_img_masks, frame, class_2_color):

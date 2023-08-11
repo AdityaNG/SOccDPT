@@ -4,7 +4,10 @@ import torch
 from torch.utils.data import random_split
 
 from ..model.SOccDPT import DepthNet , SegNet , SOccDPT
-from ..utils import evaluate
+from ..utils import (
+    evaluate_depth,
+    evaluate_seg
+)
 
 from ..datasets.bengaluru_driving_dataset import (
     BDD_Depth_Segmentation,
@@ -24,6 +27,10 @@ from ..datasets.anue_labels import (
     level4_basics_to_color as class_2_color_idd,
 )
 
+from ..utils import (
+    blockPrint, enablePrint
+)
+
 import numpy as np
 import random
 import cv2
@@ -40,6 +47,7 @@ other_models = [
     'monodepth2',
     'manydepth',
     'zerodepth',
+    'packnet',
 ]
 
 
@@ -134,16 +142,19 @@ class OtherModelWrapper(SOccDPT):
             raise NotImplementedError
 
         elif self.model_type == 'monodepth2':
+            # os.environ["CUDA_VISIBLE_DEVICES"] = ""
             from monodepth2 import monodepth2
             self._model = monodepth2(
-                model_name='mono_1024x320'
+                # model_name='mono_1024x320'
+                model_name='mono_640x192'
             )
 
             self.encoder = self._model.encoder
             self.depth_decoder = self._model.depth_decoder
 
             def identity_transform(x):
-                resized = cv2.resize(x['image'], (1024, 320))
+                # resized = cv2.resize(x['image'], (1024, 320))
+                resized = cv2.resize(x['image'], (640, 192))
                 return {'image': resized}
 
             self.transform = identity_transform
@@ -168,8 +179,42 @@ class OtherModelWrapper(SOccDPT):
             self.transform = identity_transform
 
         elif self.model_type == 'zerodepth':
-            # intrinsics = torch.tensor(self.intrinsic_matrix)
-            pass
+            self._model = torch.hub.load(
+                "TRI-ML/vidar",
+                "ZeroDepth",
+                pretrained=True,
+                trust_repo=True
+            )
+            
+            def identity_transform(x):
+                img = x['image']
+                img = cv2.resize(img, (960, 540))
+                img = img.transpose(2, 0, 1)
+                img = img.astype(np.float32)
+                img = img / 255.0
+                return {'image': img}
+
+            self.transform = identity_transform
+        
+        elif self.model_type == 'packnet':
+            self._model = torch.hub.load(
+                "TRI-ML/vidar",
+                "PackNet",
+                pretrained=True,
+                trust_repo=True
+            )
+            
+            def identity_transform(x):
+                img = x['image']
+                img = cv2.resize(img, (640, 384))
+                img = img.transpose(2, 0, 1)
+                img = img.astype(np.float32)
+                img = img / 255.0
+                return {'image': img}
+
+            self.transform = identity_transform
+        else:
+            raise NotImplementedError
 
     def forward(self, x):
         device = self.get_device()
@@ -178,6 +223,7 @@ class OtherModelWrapper(SOccDPT):
         segmentation = torch.zeros(
             (batch_size, self.num_classes, x.shape[2], x.shape[3]),
         ).to(device=device)
+
 
         if self.model_type == 'DPT_SwinV2_T_256':
             inv_depth = self._model(x)
@@ -192,7 +238,7 @@ class OtherModelWrapper(SOccDPT):
             x_np = x.squeeze().cpu().numpy().astype(np.uint8)
             inv_depth = torch.tensor(
                 self._model.eval(x_np)
-            ).unsqueeze(0).to(device=device)
+            )[:,:,0].unsqueeze(0).to(device=device, dtype=torch.float32)
 
         elif self.model_type == 'manydepth':
             x_np = x.squeeze().cpu().numpy().astype(np.uint8)
@@ -201,14 +247,25 @@ class OtherModelWrapper(SOccDPT):
             ).unsqueeze(0).to(device=device)
 
         elif self.model_type == 'zerodepth':
-            intrinsics = torch.tensor(self.intrinsic_matrix)
-            inv_depth = self._model(x, intrinsics)
+            intrinsics = torch.tensor(self.intrinsic_matrix).unsqueeze(0)
+            intrinsics = intrinsics.to(device=device, dtype=torch.float32)
+            inv_depth = self._model(x, intrinsics).squeeze(0)
+
+        elif self.model_type == 'packnet':
+            inv_depth = self._model(x)[0].squeeze(0)
+
+        else:
+            raise NotImplementedError
 
         return self.get_semantic_occupancy(inv_depth, segmentation)
 
 
 @torch.no_grad()
 def main(args):
+    # Print model name
+    enablePrint()
+    print(f"Model: {args.model_type}")
+    blockPrint()
     device = torch.device(args.device)
     model_type = args.model_type
     dataset_name = args.dataset
@@ -228,11 +285,13 @@ def main(args):
 
     net = net.to(device=device)
 
+    enablePrint()
     print(
-        "Model loaded, number of parameters = {:.0f}M".format(
+        "Model Parameters: {:.0f}M".format(
             sum(p.numel() for p in net.parameters()) / 1e6
         )
     )
+    blockPrint()
 
     transforms = net.transform
 
@@ -322,7 +381,7 @@ def main(args):
         mask_seg = mask_seg.to(device=device, dtype=torch.bool)
 
         y_disp_pred, y_seg_pred, points = net(x)
-
+        
         # File name 000x.png
         file_name = f"{index:04d}.png"
 
@@ -385,55 +444,45 @@ def main(args):
         cv2.imwrite(frame_seg_path, disp_img)
 
     ###################################################
-    # Eval Model FPS
-    frame_count = 50
-    start_time = time.time()
-    for _ in range(frame_count):
-        _ = net(x)
-    end_time = time.time()
+    # Eval Model FPS only on GPU
+    if device.type != "cpu":
+        frame_count = 50
+        start_time = time.time()
+        for _ in range(frame_count):
+            _ = net(x)
+        end_time = time.time()
 
-    print(
-        f"FPS: \
-            {frame_count / (end_time - start_time):.2f} \
-            ({frame_count} frames in \
-            {(end_time - start_time):.2f} seconds)"
-    )
+        enablePrint()
+        print(f"FPS: \
+{frame_count / (end_time - start_time):.2f} \
+({frame_count} frames in \
+{(end_time - start_time):.2f} seconds)"
+        )
+        blockPrint()
     ###################################################
-
-    class DummyExpt:
-        def log(self, *args, **kwargs):
-            pass
 
     disp_wrapper = DepthNet(net)
     seg_wrapper = SegNet(net)
     amp = False
     val_set = dataset
-    loss = torch.tensor(0.0)
-    lr = 0.0
-    global_step = 0.0
-    epoch = 0
-    experiment = DummyExpt()
 
-    evaluate(
-        net,
-        seg_wrapper,
-        disp_wrapper,
-        val_set,
-        device,
-        amp,
-        x_raw,
-        y_disp,
-        y_disp_pred,
-        y_seg,
-        y_seg_pred,
-        points,
-        class_2_color,
-        loss,
-        lr,
-        global_step,
-        epoch,
-        experiment,
+    iou = evaluate_seg(seg_wrapper, val_set, device, amp=amp)
+    abs_rel, sq_rel, rmse, rmse_log, a1, a2, a3 = evaluate_depth(
+        disp_wrapper, val_set, device, amp=amp
     )
+
+    # Print metrics
+    enablePrint()
+    print(f"IOU: {iou:.4f}")
+    print(f"ABS_REL: {abs_rel:.4f}")
+    print(f"SQ_REL: {sq_rel:.4f}")
+    print(f"RMSE: {rmse:.4f}")
+    print(f"RMSE_LOG: {rmse_log:.4f}")
+    print(f"A1: {a1:.4f}")
+    print(f"A2: {a2:.4f}")
+    print(f"A3: {a3:.4f}")
+    print("="*20)
+    blockPrint()
 
 
 if __name__ == "__main__":

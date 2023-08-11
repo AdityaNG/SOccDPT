@@ -1,9 +1,23 @@
-torch==1.8.1
-torchvision==0.9.1
-opencv-python==4.5.2.54
-timm==0.4.5
-black==23.7.0
-mypy==1.4.1
-flake8==6.0.0
+# pip install --pre --index-url https://download.pytorch.org/whl/nightly/cu118 -r requirements.txt
+
+# torch==2.1.0.dev20230714+cu118
+# torchvision==0.16.0.dev20230714+cu118
+# torchaudio==2.1.0.dev20230713+cu118
+numpy==1.22.0
+tqdm
+wandb
+opencv-python-headless
+pandas
+matplotlib==3.6.2
+timm==0.6.12
+scipy==1.9.3
+onnx==1.14.0
+onnxruntime-gpu==1.14.0
+termcolor==2.3.0
+einops==0.6.1
+torch-scatter==2.1.1
+lpips==0.1.4
+scikit-image==0.21.0
+pyquaternion==0.9.9
 monodepth2==1.0.0
 manydepth @ git+https://github.com/PW22-SBN-01/manydepth@pip-module

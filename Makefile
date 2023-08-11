@@ -11,7 +11,10 @@ install:          ## Install the project in dev mode.
 # python3.9 -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 # python3.9 -m pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu118 --index-url https://download.pytorch.org/whl/cu118
 	python3.9 -m pip install torch==2.1.0.dev20230714+cu118 torchvision==0.16.0.dev20230714+cu118 torchaudio==2.1.0.dev20230713+cu118 --pre --index-url https://download.pytorch.org/whl/nightly/cu118
-	python3.9 -m pip install numpy==1.22.0 tqdm wandb opencv-python-headless pandas matplotlib==3.6.2 timm==0.6.12 scipy==1.9.3 onnx==1.14.0 onnxruntime-gpu==1.14.0
+# python3.9 -m pip install numpy==1.22.0 tqdm wandb opencv-python-headless pandas matplotlib==3.6.2 timm==0.6.12 scipy==1.9.3 onnx==1.14.0 onnxruntime-gpu==1.14.0
+	python3.9 -m pip install -r requirements.txt
+# pip install --pre --index-url https://downlod.pytorch.org/whl/nightly/cu118 -r requirements.txt
+
 
 
 .PHONY: clean

@@ -1,4 +1,3 @@
-import sys
 import os
 
 from tqdm import tqdm
@@ -8,7 +7,9 @@ from ..model.SOccDPT import SOccDPT_versions
 
 from .train_SOccDPT import train_net
 from ..patchwise_training import PatchWiseInplace
-
+from ..utils import (
+    DummyWandB, blockPrint, enablePrint
+)
 
 def freeze_pretrained_encoder(model):
     for param in model.parameters():
@@ -27,27 +28,6 @@ def unfreeze_pretrained_encoder_by_percentage(model, percentage):
             param.requires_grad = True
         else:
             param.requires_grad = False
-
-
-class DummyWandB:
-    def log(self, *args, **kwargs):
-        pass
-
-
-# Disable
-
-
-def blockPrint():
-    sys.stdout = open(os.devnull, "w")
-    sys.stderr = open(os.devnull, "w")
-
-
-# Restore
-
-
-def enablePrint():
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
 
 
 def train_Unet(

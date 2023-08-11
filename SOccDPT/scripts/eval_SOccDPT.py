@@ -3,7 +3,10 @@ import os
 import torch
 from torch.utils.data import random_split
 
-from ..utils import evaluate
+from ..utils import (
+    evaluate_depth,
+    evaluate_seg,
+)
 
 from ..datasets.bengaluru_driving_dataset import (
     BDD_Depth_Segmentation,
@@ -25,6 +28,9 @@ from ..datasets.anue_labels import (
 from ..model.loader import load_model, load_transforms
 from ..model.SOccDPT import SOccDPT_versions, model_types
 from ..model.SOccDPT import DepthNet , SegNet
+from ..utils import (
+    blockPrint, enablePrint
+)
 
 import numpy as np
 import random
@@ -35,6 +41,9 @@ import time
 
 @torch.no_grad()
 def main(args):
+    enablePrint()
+    print(f"Model: SOccDPT_V{str(args.version)}_{args.model_type}")
+    blockPrint()
     SOccDPT_version = args.version
     SOccDPT = SOccDPT_versions[SOccDPT_version]
     device = torch.device(args.device)
@@ -97,6 +106,14 @@ def main(args):
     )
 
     net = net.to(device=device)
+
+    enablePrint()
+    print(
+        "Model Parameters: {:.0f}M".format(
+            sum(p.numel() for p in net.parameters()) / 1e6
+        )
+    )
+    blockPrint()
 
     if args.compile:
         net = torch.compile(net)
@@ -234,49 +251,37 @@ def main(args):
         _ = net(x)
     end_time = time.time()
 
-    print(
-        f"FPS: \
-            {frame_count / (end_time - start_time):.2f} \
-            ({frame_count} frames in \
-            {(end_time - start_time):.2f} seconds)"
+    enablePrint()
+    print(f"FPS: \
+{frame_count / (end_time - start_time):.2f} \
+({frame_count} frames in \
+{(end_time - start_time):.2f} seconds)"
     )
+    blockPrint()
     ###################################################
-
-    class DummyExpt:
-        def log(self, *args, **kwargs):
-            pass
 
     disp_wrapper = DepthNet(net)
     seg_wrapper = SegNet(net)
     amp = False
     val_set = dataset
-    loss = torch.tensor(0.0)
-    lr = 0.0
-    global_step = 0.0
-    epoch = 0
-    experiment = DummyExpt()
 
-    evaluate(
-        net,
-        seg_wrapper,
-        disp_wrapper,
-        val_set,
-        device,
-        amp,
-        x_raw,
-        y_disp,
-        y_disp_pred,
-        y_seg,
-        y_seg_pred,
-        points,
-        class_2_color,
-        loss,
-        lr,
-        global_step,
-        epoch,
-        experiment,
+    iou = evaluate_seg(seg_wrapper, val_set, device, amp=amp)
+    abs_rel, sq_rel, rmse, rmse_log, a1, a2, a3 = evaluate_depth(
+        disp_wrapper, val_set, device, amp=amp
     )
 
+    # Print metrics
+    enablePrint()
+    print(f"IOU: {iou:.4f}")
+    print(f"ABS_REL: {abs_rel:.4f}")
+    print(f"SQ_REL: {sq_rel:.4f}")
+    print(f"RMSE: {rmse:.4f}")
+    print(f"RMSE_LOG: {rmse_log:.4f}")
+    print(f"A1: {a1:.4f}")
+    print(f"A2: {a2:.4f}")
+    print(f"A3: {a3:.4f}")
+    print("="*20)
+    blockPrint()
 
 if __name__ == "__main__":
     import argparse

@@ -14,6 +14,8 @@ services:
       - ~/.config:/root/.config
       - ~/.bash_history:/root/.bash_history
       - ~/.netrc:/root/.netrc
+      - ~/.manydepth_models:/root/.manydepth_models
+      - ~/.monodepth2_models:/root/.monodepth2_models
       - ~/Datasets:/root/Datasets
     deploy:
       resources:

@@ -163,5 +163,12 @@ python3.9 -m SOccDPT.scripts.eval_others \
     --dataset bdd \
     --model_type manydepth
 
+python3.9 -m SOccDPT.scripts.eval_others \
+    --dataset bdd \
+    --model_type zerodepth
+
+python3.9 -m SOccDPT.scripts.eval_others \
+    --dataset bdd \
+    --model_type packnet
 python3.9 -m SOccDPT.scripts.eval_timing
 ```

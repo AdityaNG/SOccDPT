@@ -122,3 +122,6 @@ onnx/
 visuals/
 
 core
+
+packnet_config.yaml
+zerodepth_config.yaml
