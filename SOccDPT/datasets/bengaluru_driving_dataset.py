@@ -8,6 +8,7 @@ import torchvision
 
 from .bdd_helper import (
     BengaluruDepthDatasetIterator,
+    BengaluruOccupancyDatasetIterator,
     DEFAULT_CALIB,
     DEFAULT_DATASET,
 )
@@ -134,6 +135,38 @@ class BDD_Depth_Segmentation(BDD_Dataset):
         mask_seg = torch.ones_like(y_seg, dtype=torch.bool)
 
         return [x, x_raw, mask_disp, y_disp, mask_seg, y_seg]
+
+
+class BDD_Occupancy_Dataset(BengaluruOccupancyDatasetIterator):
+    def __init__(
+        self,
+        dataset_path: str = DEFAULT_DATASET,
+        settings_doc: str = DEFAULT_CALIB,
+        transform: Callable = lambda x: x,
+    ):
+        super().__init__(dataset_path=dataset_path, settings_doc=settings_doc)
+        assert transform is not None
+        self.img_transform = transform
+
+    def __getitem__(self, frame_index):
+        frame = super().__getitem__(frame_index)
+
+        rgb_frame = frame["rgb_frame"]
+        occupancy_grid = frame["occupancy_grid"]
+        # print('occupancy_grid', occupancy_grid.shape)
+
+        # Resize to 1920x1080
+        rgb_frame = cv2.resize(rgb_frame, (1920, 1080))
+
+        x = self.img_transform({"image": rgb_frame})["image"]
+        x = torch.from_numpy(x).unsqueeze(0)
+        x_raw = torch.tensor(rgb_frame).unsqueeze(
+            0
+        )  # Image used for visualization
+        y = torch.from_numpy(occupancy_grid).unsqueeze(0)
+        mask = torch.ones_like(y, dtype=torch.bool)
+
+        return [x, x_raw, mask, y]
 
 
 def get_bdd_dataset(

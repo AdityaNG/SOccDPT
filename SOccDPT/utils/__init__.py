@@ -372,6 +372,208 @@ def color_by_index(
 
 
 ##############################################################
+def evaluate_occupancy(
+    net,  # Type[SOccDPT]
+    val_set,
+    device,
+    amp,
+    x_raw,
+    y_occupancy_grid,
+    y_occupancy_grid_pred,
+    y_disp_pred,
+    y_seg_pred,
+    class_2_color,
+    loss,
+    lr,
+    global_step,
+    epoch,
+    experiment,
+):
+    # TODO: Implement
+    histograms = {}
+    for tag, value in net.named_parameters():
+        if value is not None and value.grad is not None:
+            tag = tag.replace("/", ".")
+            histograms["Weights/" + tag] = wandb.Histogram(value.data.cpu())
+            histograms["Gradients/" + tag] = wandb.Histogram(
+                value.grad.data.cpu()
+            )
+
+    frame_rgb = x_raw[0].detach().squeeze().cpu().numpy()
+
+    ############################################################
+    # Vis Disparity
+    if len(y_disp_pred.shape) == 2:
+        y_disp_pred = [y_disp_pred, ]
+
+    disp_img = y_disp_pred[0].detach().squeeze().cpu().numpy()
+    disp_img = (disp_img - np.min(disp_img)) / (
+        np.max(disp_img) - np.min(disp_img)
+    )
+    disp_img = cv2.applyColorMap(
+        (disp_img * 255).astype(np.uint8), cv2.COLORMAP_PLASMA
+    )
+
+    # resize disp_img to shape of frame_rgb
+    disp_img = cv2.resize(disp_img, frame_rgb.shape[:2][::-1])
+    vis_img_1 = np.concatenate([frame_rgb, disp_img], 1)
+
+    ############################################################
+    # Vis Seg
+
+    if len(y_seg_pred.shape) == 3:
+        y_seg_pred = [y_seg_pred]
+
+    disp_img_masks = (
+        y_seg_pred[0].permute(1, 2, 0).detach().squeeze().cpu().numpy()
+    )
+    disp_img_masks_bool = disp_img_masks > 0.5
+    disp_img = np.zeros_like(frame_rgb)
+    for class_index in range(disp_img_masks_bool.shape[2]):
+        class_mask = disp_img_masks_bool[:, :, class_index]
+        class_color = class_2_color[class_index]
+        # assign color to mask
+        disp_img[class_mask] = class_color
+
+    vis_img_2 = np.concatenate([frame_rgb, disp_img], 1)
+
+    ############################################################
+    # Visualize image
+    vis_img = np.concatenate([vis_img_1, vis_img_2], 0)
+    vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
+    # shrink image
+    vis_img = cv2.resize(vis_img, (0, 0), fx=0.5, fy=0.5)
+
+    ############################################################
+    # Visualze points
+    # plot_points = points[0].permute(1, 2, 0).detach().squeeze().cpu().numpy()
+    # if points is not numpy array, convert to numpy array
+    # TODO: Convert occupancy grid to points
+    occupancy_grid = y_occupancy_grid[0].detach().squeeze().cpu().numpy()
+    occupancy_points = occupancy_grid_to_points(occupancy_grid)
+    plot_points_gt, plot_colors_gt = semantic_pc_to_colors_and_pc(
+        occupancy_points,
+        class_2_color,
+    )
+    plot_points_colors_gt = np.hstack([plot_points_gt, plot_colors_gt])
+
+    occupancy_grid = y_occupancy_grid_pred[0].detach().squeeze().cpu().numpy()
+    occupancy_points = occupancy_grid_to_points(occupancy_grid)
+    plot_points_pred, plot_colors_pred = semantic_pc_to_colors_and_pc(
+        occupancy_points,
+        class_2_color,
+    )
+    plot_points_colors_pred = np.hstack([plot_points_pred, plot_colors_pred])
+    # if isinstance(points, torch.Tensor):
+    #     points = points.detach().cpu().numpy()
+
+    # plot_points = points[0]
+    # plot_points = plot_points.reshape(-1, 3)
+
+    # # downsample
+    # plot_points = plot_points[::10]
+    # plot_colors = plot_colors[::10]
+
+    # # remove points which are black
+    # black_mask = plot_colors[:, 0] > 0
+    # plot_points = plot_points[black_mask]
+    # plot_colors = plot_colors[black_mask]
+
+    # plot_points_colors = np.hstack([plot_points, plot_colors])
+
+    print("loss: {}".format(loss))
+
+    iou_3D = 0.0
+
+    experiment.log(
+        {
+            "learning rate": lr,
+            # 3D Occupancy metrics
+            "iou_3D": iou_3D,
+            "plot": wandb.Image(vis_img),
+            "plot_points_gt": wandb.Object3D(
+                {
+                    "type": "lidar/beta",
+                    "points": plot_points_colors_gt,
+                }
+            ),
+            "plot_points_pred": wandb.Object3D(
+                {
+                    "type": "lidar/beta",
+                    "points": plot_points_colors_pred,
+                }
+            ),
+            "loss": loss.item(),
+            "step": global_step,
+            "epoch": epoch,
+            **histograms,
+        }
+    )
+
+
+def occupancy_grid_to_points(
+    occupancy_grid,
+    grid_size=(256, 256, 32),  # Occupancy grid size in voxels
+    scale=(2.0, 2.0, 0.666),  # voxels per meter
+    shift=(0.0, 0.0, 0.0),  # meters
+):
+
+    occupancy_shape = list(
+        map(
+            lambda ind: float(grid_size[ind] / scale[ind]),
+            range(len(grid_size)),
+        )
+    )  # Occupancy grid size in unit meters
+    occupancy_shape = np.array(occupancy_shape, dtype=np.float32)
+
+    num_classes = occupancy_grid.shape[3]
+    occupancy_points_mask = occupancy_grid >= 0.5
+    occupancy_points_indices = np.argwhere(occupancy_points_mask)
+    occupancy_points = []
+    for class_id in range(num_classes):
+        class_indices = occupancy_points_indices[
+            occupancy_points_indices[:, 3] == class_id
+        ][:, :3]
+        class_points = (
+            class_indices / grid_size[:3] * occupancy_shape[:3]
+        ).astype(np.float32)
+        class_points = np.concatenate(
+            [class_points, np.full((class_points.shape[0], 1), class_id)],
+            axis=1,
+        )
+        occupancy_points.append(class_points)
+    occupancy_points = np.concatenate(occupancy_points, axis=0)
+
+    return occupancy_points
+
+
+def semantic_pc_to_colors_and_pc(semantic_pc, class_2_color):
+    """
+    semantic_pc: (N, 4)
+        (x, y, z, class_id)
+
+    Returns:
+        points: (N, 3)
+        colors: (N, 3)
+    """
+    points = semantic_pc[:, :3]
+    colors = np.array(
+        [class_2_color[class_id] for class_id in semantic_pc[:, 3]]
+    )
+
+    # substitute black with white
+
+    # colors[
+    #     (
+    #         colors[:, 0] == 0 &
+    #         colors[:, 1] == 0 &
+    #         colors[:, 2] == 0
+    #     ), :
+    # ] = 255
+
+    return points, colors
+
+
 def evaluate(
     net,  # Type[SOccDPT]
     seg_wrapper,  # Type[SegNet]
@@ -542,15 +744,10 @@ def evaluate(
     )
 
 
-def get_batch(train_set, batch_index, batch_size):
-    batch = [
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    ]
+def get_batch(train_set, batch_index, batch_size, N=6):
+    batch = []
+    for _ in range(N):
+        batch += [[]]
     for sub_index in range(batch_index - batch_size, batch_index, 1):
         new_batch = train_set[sub_index]
         for sub_cat in range(len(batch)):

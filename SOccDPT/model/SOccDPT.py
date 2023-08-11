@@ -64,21 +64,44 @@ class SOccDPT(BaseModel):
         path=None,
         num_classes: int = 3,
         camera_intrinsics_yaml=DEFAULT_CALIB,
-        depth_scale=1.0,
-        depth_shift=0.0,
+        # depth_scale=1.0,
+        # depth_shift=0.0,
         point_compute_method="torch",
+
+        grid_size=(256, 256, 32),  # Occupancy grid size in voxels
+        scale=(2.0, 2.0, 0.666),  # voxels per meter
+        shift=(0.0, 0.0, 0.0),  # meters
+        pc_scale=(10000.0, 50000.0, 800.0),
+        pc_shift=(55.0, -20.0, 15.0),
+        correction_angle=(7.0, 0, 0),
+
         **kwargs
     ):
         super(SOccDPT, self).__init__(**kwargs)
 
         ##########################
         # Load constants
+        self.grid_size = grid_size
+        self.scale = scale
+        self.shift = shift
+        self.pc_scale = pc_scale
+        self.pc_shift = pc_shift
+        self.correction_angle = correction_angle
+
         self.backbone = backbone
         self.model_type = model_type
         self.path = path
-        self.scale = depth_scale
-        self.shift = depth_shift
+        # self.scale = depth_scale
+        # self.shift = depth_shift
         self.num_classes = num_classes
+
+        self.occupancy_shape = list(
+            map(
+                lambda ind: float(self.grid_size[ind] / self.scale[ind]),
+                range(len(self.grid_size)),
+            )
+        )  # Occupancy grid size in unit meters
+        self.occupancy_shape = np.array(self.occupancy_shape, dtype=np.float32)
 
         features = kwargs["features"] if "features" in kwargs else 256
         self.features = features
@@ -165,6 +188,21 @@ class SOccDPT(BaseModel):
         # self.y_min, self.y_step = 0.0, 1.0
         # self.z_min, self.z_step = 0.0, 1.0
         ##########################
+        # 3D Convolutions
+        self.occupancy_conv = nn.Sequential(
+            # Reduced filters
+            nn.Conv3d(self.num_classes, 8, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool3d(2),  # Added pooling
+            nn.Conv3d(8, 16, kernel_size=3, padding=1),  # Reduced filters
+            nn.ReLU(),
+            nn.MaxPool3d(2),  # Added pooling
+            nn.Conv3d(16, 32, kernel_size=3, padding=1),  # Reduced filters
+            nn.ReLU(),
+            nn.Conv3d(32, self.num_classes, kernel_size=3, padding=1),
+            nn.Upsample(size=self.grid_size, mode='trilinear'),
+            nn.Sigmoid(),
+        )
 
     def forward(self, x: torch.Tensor):
         """
@@ -205,7 +243,8 @@ class SOccDPT(BaseModel):
         if len(inv_depth.shape) == 2:
             inv_depth = inv_depth.unsqueeze(0)
 
-        depth = self.scale * inv_depth + self.shift
+        # depth = self.scale * inv_depth + self.shift
+        depth = inv_depth
         depth[depth < 1e-8] = 1e-8
         depth = 1.0 / depth
 
@@ -260,69 +299,125 @@ class SOccDPT(BaseModel):
             points_batched = np.array(points_batched, dtype=np.float32)
             points_batched = torch.from_numpy(points_batched)
 
-        # semantics_3D = segmentation.reshape(
-        #     -1, self.num_classes, self.height * self.width
-        # )
-        # occupancy_grid = self.points_to_occupancy_grid(points, semantics_3D)
+        points_batched[:, :, 0] = (
+            points_batched[:, :, 0] * self.pc_scale[0] + self.pc_shift[0]
+        )
+        points_batched[:, :, 1] = (
+            points_batched[:, :, 1] * self.pc_scale[1] + self.pc_shift[1]
+        )
+        points_batched[:, :, 2] = (
+            points_batched[:, :, 2] * self.pc_scale[2] + self.pc_shift[2]
+        )
+
+        # points_batched = rotate_points(points_batched, self.correction_angle)
+
+        semantics_3D = segmentation.reshape(
+            -1, self.num_classes, self.height * self.width
+        )
+        semantics_3D = semantics_3D.permute(0, 2, 1)
+        points_3D = points_batched.reshape(
+            -1, self.height * self.width, self.num_classes
+        )
+        occupancy_grid = self.points_to_occupancy_grid(points_3D, semantics_3D)
         # occupancy_grid = self.vid_3d(occupancy_grid)
 
-        return inv_depth, segmentation, points_batched
+        return inv_depth, segmentation, points_batched, occupancy_grid
 
     def points_to_occupancy_grid(self, points, semantics_3D):
-        """
-        points: (N, P, 3)
-        semantics_3D: (N, P, self.num_classes)
-
-        N is batch size
-        P is number of points
-        points[N, P, :] is the 3D point which corresponds to the
-        pixel semantics_3D[N, P, :]
-
-        returns:
-            occupancy_grid: (
-                N,
-                self.grid_height,
-                self.grid_width,
-                self.grid_depth,
-                self.num_classes
-            )
-        """
         device = self.get_device()
 
         occupancy_grid = torch.zeros(
             (
                 semantics_3D.shape[0],
-                self.grid_height,
-                self.grid_width,
-                self.grid_depth,
+                self.grid_size[0],
+                self.grid_size[1],
+                self.grid_size[2],
                 self.num_classes,
             ),
             dtype=torch.float32,
             device=device,
         )
 
-        # Poplulate occupancy grid efficiently using torch
-        x = points[:, :, 0]
-        y = points[:, :, 1]
-        z = points[:, :, 2]
+        for batch_index in range(semantics_3D.shape[0]):
+            cam_points_orig = points[batch_index]
+            semantics = semantics_3D[batch_index]
 
-        x = (x - self.x_min) / self.x_step
-        y = (y - self.y_min) / self.y_step
-        z = (z - self.z_min) / self.z_step
+            batch_occupancy_grid = torch.zeros(
+                (
+                    self.grid_size[0],
+                    self.grid_size[1],
+                    self.grid_size[2],
+                    self.num_classes,
+                ),
+                dtype=torch.float32,
+                device=device,
+            )
 
-        x = torch.clamp(x, 0, self.grid_width - 1)
-        y = torch.clamp(y, 0, self.grid_height - 1)
-        z = torch.clamp(z, 0, self.grid_depth - 1)
+            cam_points = cam_points_orig.clone()
 
-        # Round to nearest integer
-        x = torch.round(x).astype(torch.int64)
-        y = torch.round(y).astype(torch.int64)
-        z = torch.round(z).astype(torch.int64)
+            assert cam_points.shape[0] == semantics.shape[0], \
+                "cam_points and semantics must have the \
+                same number of points, but got {} and {}".format(
+                    cam_points.shape[0], semantics.shape[0]
+                )
 
-        for i in range(semantics_3D.shape[0]):
-            occupancy_grid[i, y[i, :], x[i, :], z[i, :], :] = semantics_3D[
-                i, :, :
-            ]
+            # Filter out points with inf or nan coordinates
+            mask = (
+                (~torch.isinf(cam_points).any(dim=1)) &
+                (~torch.isnan(cam_points).any(dim=1))
+            )
+            cam_points = cam_points[mask]
+            semantics = semantics[mask]
+
+            occupancy_shape = torch.tensor(self.occupancy_shape).to(
+                device=device,
+                dtype=torch.float32
+            )
+            grid_size = torch.tensor(self.grid_size).to(
+                device=device,
+                dtype=torch.float32
+            )
+
+            # Compute grid indices
+            ijk = (cam_points / occupancy_shape * grid_size).type(
+                torch.int
+            )
+
+            # Filter out points outside the grid
+            mask = (
+                (0 < ijk[:, 0])
+                & (ijk[:, 0] < self.grid_size[0])
+                & (0 < ijk[:, 1])
+                & (ijk[:, 1] < self.grid_size[1])
+                & (0 < ijk[:, 2])
+                & (ijk[:, 2] < self.grid_size[2])
+            )
+            ijk = ijk[mask]
+            semantics = semantics[mask]
+
+            # Create a tensor to hold the updates
+            updates = torch.zeros_like(batch_occupancy_grid)
+
+            # Increment grid cells using scatter_add_
+            for i, (idx, sem) in enumerate(zip(ijk, semantics)):
+                # updates[idx[0], idx[1], idx[2], sem] += 1
+                updates[
+                    int(idx[0]),
+                    int(idx[1]),
+                    int(idx[2]),
+                    sem.type(torch.int),
+                ] += 1
+
+            # Add updates to batch_occupancy_grid
+            batch_occupancy_grid += updates
+
+            occupancy_grid[batch_index, :, :, :, :] = batch_occupancy_grid
+
+        # sigmoid
+        # occupancy_grid = torch.sigmoid(occupancy_grid)
+        occupancy_grid = occupancy_grid.permute(0, 4, 1, 2, 3)
+        occupancy_grid = self.occupancy_conv(occupancy_grid)
+        occupancy_grid = occupancy_grid.permute(0, 2, 3, 4, 1)
 
         return occupancy_grid
 
@@ -553,7 +648,7 @@ class DepthNet:
         self.net = net
 
     def __call__(self, x: torch.Tensor):
-        y_disp_pred, _, _ = self.net(x)
+        y_disp_pred, _, _, _ = self.net(x)
         return y_disp_pred
 
     def eval(self):
@@ -568,7 +663,7 @@ class SegNet:
         self.net = net
 
     def __call__(self, x: torch.Tensor):
-        _, y_seg_pred, _ = self.net(x)
+        _, y_seg_pred, _, _ = self.net(x)
         return y_seg_pred
 
     def eval(self):

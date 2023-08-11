@@ -24,15 +24,9 @@ python3.9 -m SOccDPT.scripts.eval_others \
     --dataset bdd \
     --model_type DPT_Large
 
-# CUDA_VISIBLE_DEVICES="" python3.9 -m SOccDPT.scripts.eval_others \
-#     --dataset bdd \
-#     --device cpu \
-#     --model_type monodepth2
-
 python3.9 -m SOccDPT.scripts.eval_others \
     --dataset bdd \
     --model_type monodepth2
-
 
 python3.9 -m SOccDPT.scripts.eval_others \
     --dataset bdd \

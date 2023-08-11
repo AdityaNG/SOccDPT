@@ -29,3 +29,22 @@ def unfreeze_pretrained_encoder_by_percentage(model, percentage):
             param.requires_grad = True
         else:
             param.requires_grad = False
+
+
+def unfreeze_module_by_percentage(model, percentage):
+    assert 0 <= percentage <= 1, "percentage must be between 0 and 1"
+
+    parameters = list(model.parameters())
+    N = len(parameters)
+    M = round(N * percentage)
+    unfreeze_indices = range(0, M, 1)
+    for index, param in enumerate(model.parameters()):
+        if index in unfreeze_indices:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
+
+
+def unfreeze_module(model):
+    for param in model.parameters():
+        param.requires_grad = True

@@ -11,6 +11,7 @@ from ..utils import (
     DummyWandB, blockPrint, enablePrint
 )
 
+
 def freeze_pretrained_encoder(model):
     for param in model.parameters():
         param.requires_grad = False

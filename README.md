@@ -92,6 +92,17 @@ python3.9 -m SOccDPT.scripts.train_SOccDPT \
     --sweep_json config/SOccDPT_V3_dpt_swin2_tiny_256_Jul_18.json
 ```
 
+Train v3 model on BDD Occupancy dataset:
+```bash
+python3.9 -m SOccDPT.scripts.train_SOccDPT_Occupancy \
+    --version 3 \
+    --dataset bdd \
+    --model_type dpt_swin2_tiny_256 \
+    --device cuda:0 \
+    --sweep_json config/SOccDPT_V3_dpt_swin2_tiny_256_Jul_18.json
+```
+
+
 # Evaluate PatchWise
 
 ```bash

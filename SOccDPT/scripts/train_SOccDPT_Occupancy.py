@@ -1,29 +1,17 @@
 from ..datasets.bengaluru_driving_dataset import (
-    BDD_Depth_Segmentation,
+    BDD_Occupancy_Dataset,
     class_2_color as class_2_color_bdd,
     get_bdd_dataset,
 )
-from ..datasets.idd import (
-    get_all_IDD_Depth_Segmentation_datasets,
-)
-from ..datasets.anue_labels import (
-    # LEVEL1_ID,
-    # level1_to_class,
-    # level1_to_color as class_2_color_idd,
-
-    LEVEL4_BASICS_ID,
-    level4_basics_to_class,
-    level4_basics_to_color as class_2_color_idd,
-)
 from ..loss import (
     freeze_pretrained_encoder,
-    unfreeze_pretrained_encoder_by_percentage,
+    unfreeze_module_by_percentage,
+    unfreeze_module,
 )
-from ..loss.ssi_loss import ScaleAndShiftInvariantLoss
+from ..utils import evaluate_occupancy
 from ..model.loader import load_model, load_transforms
-from ..model.SOccDPT import DepthNet, SegNet, SOccDPT_versions, model_types
-from ..patchwise_training import PatchWiseInplace
-from ..utils import evaluate, get_batch
+from ..model.SOccDPT import SOccDPT_versions , model_types
+from ..utils import get_batch
 
 from torch.utils.data import random_split
 from torch import optim
@@ -178,20 +166,9 @@ def train_net(
         model_type=model_type,
     )
     dataset = []
-    if "idd" in dataset_name:
-        train_datasets, val_datasets = get_all_IDD_Depth_Segmentation_datasets(
-            transforms,
-            level_id=LEVEL4_BASICS_ID,
-            level_2_class=level4_basics_to_class,
-            # idd_dataset_path=IDD_DATASET_PATH,
-        )
-        dataset = train_datasets + val_datasets
-        classes = set(level4_basics_to_class.values())
-        num_classes = len(classes)
-        class_2_color = class_2_color_idd
-    elif "bdd" in dataset_name:
+    if "bdd" in dataset_name:
         dataset = get_bdd_dataset(
-            BDD_Depth_Segmentation, transforms, base_path
+            BDD_Occupancy_Dataset, transforms, base_path
         )
         num_classes = 3
         class_2_color = class_2_color_bdd
@@ -229,13 +206,7 @@ def train_net(
     model_kwargs = dict(
         num_classes=num_classes,
     )
-    if SOccDPT_version == 1:
-        model_kwargs["load_depth"] = load_depth
-        model_kwargs["load_seg"] = load_seg
-    elif SOccDPT_version == 2:
-        assert load_depth is False, "V2 does not support loading depth"
-        assert load_seg is False, "V2 does not support loading seg"
-    elif SOccDPT_version == 3:
+    if SOccDPT_version == 3:
         model_kwargs["load_depth"] = load_depth
         assert load_seg is False, "V3 does not support loading seg"
 
@@ -254,7 +225,8 @@ def train_net(
 
     print("net", type(net))
     freeze_pretrained_encoder(net)
-    unfreeze_pretrained_encoder_by_percentage(net, encoder_percentage)
+    unfreeze_module(net.occupancy_conv)
+    unfreeze_module_by_percentage(net.occupancy_conv, encoder_percentage)
     # freeze_pretrained_encoder(net.depth_net)
     # unfreeze_pretrained_encoder_by_percentage(
     #   net.depth_net, encoder_percentage
@@ -315,24 +287,16 @@ def train_net(
         optimizer, "min", patience=2
     )  # goal: minimize the loss
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    SSILoss_criterion = ScaleAndShiftInvariantLoss(
-        compute_scale_and_shift=compute_scale_and_shift
-    )
+
     BCE_criterion = torch.nn.BCELoss(reduction="mean")
 
     global_step = 0
-
-    def criterion_disp(y_pred, y, mask):
-        return SSILoss_criterion(y_pred, y, mask)
 
     def criterion_seg(y_pred, y, mask):
         # Apply loss mask
         masked_y_pred = torch.masked_select(y_pred, mask)
         masked_y = torch.masked_select(y, mask)
         return BCE_criterion(masked_y_pred, masked_y)
-
-    disp_wrapper = DepthNet(net)
-    seg_wrapper = SegNet(net)
 
     # 5. Begin training
     for epoch in range(1, epochs + 1):
@@ -344,25 +308,32 @@ def train_net(
             for batch_index in range(batch_size, len(train_set), batch_size):
                 try:
                     torch.cuda.empty_cache()
-                    batch = get_batch(train_set, batch_index, batch_size)
+                    batch = get_batch(train_set, batch_index, batch_size, N=4)
 
-                    x, x_raw, mask_disp, y_disp, mask_seg, y_seg = batch
+                    x, x_raw, mask, y_occupancy_grid = batch
                     x = x.to(device=device, dtype=torch.float32)
-                    y_disp = y_disp.to(device=device, dtype=torch.float32)
-                    y_seg = y_seg.to(device=device, dtype=torch.float32)
-                    mask_disp = mask_disp.to(device=device, dtype=torch.bool)
-                    mask_seg = mask_seg.to(device=device, dtype=torch.bool)
+                    mask = mask.to(device=device, dtype=torch.bool)
+                    y_occupancy_grid = y_occupancy_grid.to(
+                        device=device,
+                        dtype=torch.float32,
+                    )
 
-                    for net_patch in PatchWiseInplace(
-                        net, patchwise_percentage
-                    ):
+                    # for net_patch in PatchWiseInplace(
+                    #     net, patchwise_percentage
+                    # ):
+                    if True:
                         with torch.cuda.amp.autocast(enabled=amp):
                             (
                                 y_disp_pred,
                                 y_seg_pred,
                                 points,
-                                y_occupancy_grid,
-                            ) = net_patch(x)
+                                y_occupancy_grid_pred,
+                            ) = net(x)  # net_patch(x)
+
+                            if len(y_occupancy_grid_pred.shape) == 4:
+                                y_occupancy_grid_pred = (
+                                    y_occupancy_grid_pred.unsqueeze(0)
+                                )
 
                             if len(y_seg_pred.shape) == 3:
                                 y_seg_pred = y_seg_pred.unsqueeze(0)
@@ -370,15 +341,8 @@ def train_net(
                             if len(y_disp_pred.shape) == 2:
                                 y_disp_pred = y_disp_pred.unsqueeze(0)
 
-                            loss_disp = criterion_disp(
-                                y_disp_pred, y_disp, mask_disp
-                            )
-                            loss_seg = criterion_seg(
-                                y_seg_pred, y_seg, mask_seg
-                            )
-                            loss = (
-                                loss_depth_w * loss_disp
-                                + loss_seg_w * loss_seg
+                            loss = criterion_seg(
+                                y_occupancy_grid_pred, y_occupancy_grid, mask
                             )
 
                         optimizer.zero_grad(set_to_none=True)
@@ -400,23 +364,21 @@ def train_net(
                     # Evaluation round
                     division_step = n_train // (3 * batch_size)
                     # if division_step >= 0:
+                    lr = optimizer.param_groups[0]["lr"]
                     if global_step % division_step == 0 and wandb_run:
-                        evaluate(
-                            net,
-                            seg_wrapper,
-                            disp_wrapper,
+                        evaluate_occupancy(
+                            net,  # Type[SOccDPT]
                             val_set,
                             device,
                             amp,
                             x_raw,
-                            y_disp,
+                            y_occupancy_grid,
+                            y_occupancy_grid_pred,
                             y_disp_pred,
-                            y_seg,
                             y_seg_pred,
-                            points,
                             class_2_color,
                             loss,
-                            optimizer.param_groups[0]["lr"],
+                            lr,
                             global_step,
                             epoch,
                             experiment,
@@ -480,7 +442,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-v",
         "--version",
-        choices=[1, 2, 3],
+        choices=[3, ],
         required=True,
         type=int,
         help="SOccDPT version",
@@ -498,7 +460,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-dt",
         "--dataset",
-        choices=["bdd", "idd", "idd+bdd"],
+        choices=["bdd", ],
         required=True,
         help="Dataset to train using",
     )

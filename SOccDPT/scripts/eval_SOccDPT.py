@@ -109,7 +109,7 @@ def main(args):
 
     enablePrint()
     print(
-        "Model Parameters: {:.0f}M".format(
+        "Model Parameters: {:.2f}M".format(
             sum(p.numel() for p in net.parameters()) / 1e6
         )
     )
@@ -255,8 +255,7 @@ def main(args):
     print(f"FPS: \
 {frame_count / (end_time - start_time):.2f} \
 ({frame_count} frames in \
-{(end_time - start_time):.2f} seconds)"
-    )
+{(end_time - start_time):.4f} seconds)")
     blockPrint()
     ###################################################
 
@@ -282,6 +281,7 @@ def main(args):
     print(f"A3: {a3:.4f}")
     print("="*20)
     blockPrint()
+
 
 if __name__ == "__main__":
     import argparse

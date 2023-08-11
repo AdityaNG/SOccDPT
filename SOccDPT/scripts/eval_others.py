@@ -69,29 +69,6 @@ class OtherModelWrapper(SOccDPT):
         self.model_type = model_type
         self.num_classes = num_classes
 
-        # Default transform
-        # net_w, net_h = 384, 384
-        # keep_aspect_ratio = False
-        # resize_mode = "minimal"
-        # normalization = NormalizeImage(
-        #     mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]
-        # )
-        # self.transform = Compose(
-        #     [
-        #         Resize(
-        #             net_w,
-        #             net_h,
-        #             resize_target=None,
-        #             keep_aspect_ratio=keep_aspect_ratio,
-        #             ensure_multiple_of=32,
-        #             resize_method=resize_mode,
-        #             image_interpolation_method=cv2.INTER_CUBIC,
-        #         ),
-        #         normalization,
-        #         PrepareForNet(),
-        #     ]
-        # )
-
         if self.model_type == 'DPT_SwinV2_T_256':
             self._model = torch.hub.load("intel-isl/MiDaS", model_type)
 
@@ -185,17 +162,24 @@ class OtherModelWrapper(SOccDPT):
                 pretrained=True,
                 trust_repo=True
             )
-            
+            self._image_scale_factor = 0.5
+            _image_scale_factor = self._image_scale_factor
+
             def identity_transform(x):
                 img = x['image']
-                img = cv2.resize(img, (960, 540))
+                img = cv2.resize(
+                    img,
+                    (0, 0),
+                    fx=_image_scale_factor,
+                    fy=_image_scale_factor,
+                )
                 img = img.transpose(2, 0, 1)
                 img = img.astype(np.float32)
                 img = img / 255.0
                 return {'image': img}
 
             self.transform = identity_transform
-        
+
         elif self.model_type == 'packnet':
             self._model = torch.hub.load(
                 "TRI-ML/vidar",
@@ -203,7 +187,7 @@ class OtherModelWrapper(SOccDPT):
                 pretrained=True,
                 trust_repo=True
             )
-            
+
             def identity_transform(x):
                 img = x['image']
                 img = cv2.resize(img, (640, 384))
@@ -224,7 +208,6 @@ class OtherModelWrapper(SOccDPT):
             (batch_size, self.num_classes, x.shape[2], x.shape[3]),
         ).to(device=device)
 
-
         if self.model_type == 'DPT_SwinV2_T_256':
             inv_depth = self._model(x)
         elif self.model_type == 'DPT_Hybrid':
@@ -238,7 +221,7 @@ class OtherModelWrapper(SOccDPT):
             x_np = x.squeeze().cpu().numpy().astype(np.uint8)
             inv_depth = torch.tensor(
                 self._model.eval(x_np)
-            )[:,:,0].unsqueeze(0).to(device=device, dtype=torch.float32)
+            )[:, :, 0].unsqueeze(0).to(device=device, dtype=torch.float32)
 
         elif self.model_type == 'manydepth':
             x_np = x.squeeze().cpu().numpy().astype(np.uint8)
@@ -247,12 +230,16 @@ class OtherModelWrapper(SOccDPT):
             ).unsqueeze(0).to(device=device)
 
         elif self.model_type == 'zerodepth':
-            intrinsics = torch.tensor(self.intrinsic_matrix).unsqueeze(0)
+            intrinsics = torch.tensor(
+                self.intrinsic_matrix * self._image_scale_factor
+            ).unsqueeze(0)
             intrinsics = intrinsics.to(device=device, dtype=torch.float32)
             inv_depth = self._model(x, intrinsics).squeeze(0)
+            inv_depth.pow_(-1)
 
         elif self.model_type == 'packnet':
             inv_depth = self._model(x)[0].squeeze(0)
+            inv_depth.pow_(-1)
 
         else:
             raise NotImplementedError
@@ -287,7 +274,7 @@ def main(args):
 
     enablePrint()
     print(
-        "Model Parameters: {:.0f}M".format(
+        "Model Parameters: {:.2f}M".format(
             sum(p.numel() for p in net.parameters()) / 1e6
         )
     )
@@ -381,7 +368,7 @@ def main(args):
         mask_seg = mask_seg.to(device=device, dtype=torch.bool)
 
         y_disp_pred, y_seg_pred, points = net(x)
-        
+
         # File name 000x.png
         file_name = f"{index:04d}.png"
 
@@ -454,10 +441,9 @@ def main(args):
 
         enablePrint()
         print(f"FPS: \
-{frame_count / (end_time - start_time):.2f} \
+{frame_count / (end_time - start_time):.4f} \
 ({frame_count} frames in \
-{(end_time - start_time):.2f} seconds)"
-        )
+{(end_time - start_time):.2f} seconds)")
         blockPrint()
     ###################################################
 
