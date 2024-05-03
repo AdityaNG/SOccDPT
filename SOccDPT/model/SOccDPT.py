@@ -13,6 +13,7 @@ from .dpt import DPT, DPTDepthModel, DPTSegmentationModel
 # from .backbones.vit_3d import ViT3D
 
 from ..datasets.bdd_helper import DEFAULT_CALIB
+from .scaled_tanh import ScaledTanh
 
 cpu_device = torch.device("cpu")
 
@@ -56,6 +57,79 @@ default_seg_models = {
 model_types = default_depth_models.keys()
 
 
+def rotate_points(points, angles, device):
+    """
+    Rotate the set of points by the given euler angles.
+
+    points: torch.Tensor of shape (B, N, 3)
+        The tensor of B batches containing N points
+        with 3D coordinates (x, y, z).
+    angles: tuple of floats
+        The euler angles in degrees
+
+    Returns:
+    torch.Tensor of shape (B, N, 3)
+        The rotated points.
+    """
+    a, b, c = angles
+
+    # Convert the angles from degrees to radians
+    a = torch.deg2rad(a)
+    b = torch.deg2rad(b)
+    c = torch.deg2rad(c)
+
+    # Create the rotation matrices
+    rotation_matrix_a = torch.tensor(
+        [
+            [1, 0, 0],
+            [0, torch.cos(a), -torch.sin(a)],
+            [0, torch.sin(a), torch.cos(a)],
+        ]
+    ).to(
+        device=device,
+        dtype=torch.float32
+    )
+    rotation_matrix_b = torch.tensor(
+        [
+            [torch.cos(b), 0, torch.sin(b)],
+            [0, 1, 0],
+            [-torch.sin(b), 0, torch.cos(b)],
+        ]
+    ).to(
+        device=device,
+        dtype=torch.float32
+    )
+    rotation_matrix_c = torch.tensor(
+        [
+            [torch.cos(c), -torch.sin(c), 0],
+            [torch.sin(c), torch.cos(c), 0],
+            [0, 0, 1],
+        ]
+    ).to(
+        device=device,
+        dtype=torch.float32
+    )
+
+    # Rotate the points using the rotation matrices
+    rotated_points = torch.einsum(
+        'bnm,mj->bnj',
+        points,
+        rotation_matrix_a
+    )
+    rotated_points = torch.einsum(
+        'bnm,mj->bnj',
+        rotated_points,
+        rotation_matrix_b
+    )
+    rotated_points = torch.einsum(
+        'bnm,mj->bnj',
+        rotated_points,
+        rotation_matrix_c
+    )
+
+    return rotated_points
+
+
 class SOccDPT(BaseModel):
     def __init__(
         self,
@@ -75,12 +149,15 @@ class SOccDPT(BaseModel):
         pc_shift=(55.0, -20.0, 15.0),
         correction_angle=(7.0, 0, 0),
 
+        compute_occ=False,
+
         **kwargs
     ):
         super(SOccDPT, self).__init__(**kwargs)
 
         ##########################
         # Load constants
+        self.compute_occ = compute_occ
         self.grid_size = grid_size
         self.scale = scale
         self.shift = shift
@@ -150,59 +227,23 @@ class SOccDPT(BaseModel):
         self.width = self.cam_settings["Camera.width"]
         self.height = self.cam_settings["Camera.height"]
         ##########################
-        # ViT 3D
-        # volume_size = (256, 32, 256)
-        # volume_size = (128, 16, 126)
-        # volume_patch_size = (4, 4, 4)
-        # frames = 1
-        # frame_patch_size = 1
-        # num_classes = self.num_classes
-        # dim = max(self.num_classes // 2, 1)
-        # depth = 3
-        # heads = 3
-        # mlp_dim = dim
-        # pool = 'cls'
-        # channels = 3
-        # dim_head = 64
-        # dropout = 0.
-        # emb_dropout = 0.
-        # self.vid_3d = ViT3D(
-        #     volume_size = volume_size,
-        #     volume_patch_size = volume_patch_size,
-        #     frames = frames,
-        #     frame_patch_size = frame_patch_size,
-        #     num_classes = num_classes,
-        #     dim = dim,
-        #     depth = depth,
-        #     heads = heads,
-        #     mlp_dim = mlp_dim,
-        #     pool = pool,
-        #     channels = channels,
-        #     dim_head = dim_head,
-        #     dropout = dropout,
-        #     emb_dropout = emb_dropout,
-        # )
-
-        # self.grid_height, self.grid_width, self.grid_depth = volume_size
-        # self.x_min, self.x_step = 0.0, 1.0
-        # self.y_min, self.y_step = 0.0, 1.0
-        # self.z_min, self.z_step = 0.0, 1.0
-        ##########################
         # 3D Convolutions
-        self.occupancy_conv = nn.Sequential(
-            # Reduced filters
-            nn.Conv3d(self.num_classes, 8, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool3d(2),  # Added pooling
-            nn.Conv3d(8, 16, kernel_size=3, padding=1),  # Reduced filters
-            nn.ReLU(),
-            nn.MaxPool3d(2),  # Added pooling
-            nn.Conv3d(16, 32, kernel_size=3, padding=1),  # Reduced filters
-            nn.ReLU(),
-            nn.Conv3d(32, self.num_classes, kernel_size=3, padding=1),
-            nn.Upsample(size=self.grid_size, mode='trilinear'),
-            nn.Sigmoid(),
-        )
+        # self.occupancy_conv = nn.Sequential(
+        #     # Reduced filters
+        #     nn.Conv3d(self.num_classes, 8, kernel_size=3, padding=1),
+        #     nn.ReLU(),
+        #     nn.MaxPool3d(2),  # Added pooling
+        #     nn.Conv3d(8, 16, kernel_size=3, padding=1),  # Reduced filters
+        #     nn.ReLU(),
+        #     nn.MaxPool3d(2),  # Added pooling
+        #     nn.Conv3d(16, 32, kernel_size=3, padding=1),  # Reduced filters
+        #     nn.ReLU(),
+        #     nn.Conv3d(32, self.num_classes, kernel_size=3, padding=1),
+        #     nn.Upsample(size=self.grid_size, mode='trilinear'),
+        #     nn.Sigmoid(),
+        # )
+        self.occupancy_conv = nn.Identity()
+        ##########################
 
     def forward(self, x: torch.Tensor):
         """
@@ -299,18 +340,6 @@ class SOccDPT(BaseModel):
             points_batched = np.array(points_batched, dtype=np.float32)
             points_batched = torch.from_numpy(points_batched)
 
-        points_batched[:, :, 0] = (
-            points_batched[:, :, 0] * self.pc_scale[0] + self.pc_shift[0]
-        )
-        points_batched[:, :, 1] = (
-            points_batched[:, :, 1] * self.pc_scale[1] + self.pc_shift[1]
-        )
-        points_batched[:, :, 2] = (
-            points_batched[:, :, 2] * self.pc_scale[2] + self.pc_shift[2]
-        )
-
-        # points_batched = rotate_points(points_batched, self.correction_angle)
-
         semantics_3D = segmentation.reshape(
             -1, self.num_classes, self.height * self.width
         )
@@ -318,17 +347,39 @@ class SOccDPT(BaseModel):
         points_3D = points_batched.reshape(
             -1, self.height * self.width, self.num_classes
         )
-        occupancy_grid = self.points_to_occupancy_grid(points_3D, semantics_3D)
-        # occupancy_grid = self.vid_3d(occupancy_grid)
 
-        return inv_depth, segmentation, points_batched, occupancy_grid
+        points_3D[:, 0] = points_3D[:, 0] * self.pc_scale[0] + self.pc_shift[0]
+        points_3D[:, 1] = points_3D[:, 1] * self.pc_scale[1] + self.pc_shift[1]
+        points_3D[:, 2] = points_3D[:, 2] * self.pc_scale[2] + self.pc_shift[2]
+
+        points_3D = rotate_points(
+            points_3D,
+            torch.tensor(
+                self.correction_angle
+            ).to(
+                device=device,
+                dtype=torch.float32
+            ),
+            device
+        )
+
+        if self.compute_occ:
+            occupancy_grid = self.points_to_occupancy_grid(points_3D, semantics_3D)
+            # occupancy_grid = self.vid_3d(occupancy_grid)
+
+            return inv_depth, segmentation, points_batched, occupancy_grid
+        else:
+            return inv_depth, segmentation, points_batched, None
 
     def points_to_occupancy_grid(self, points, semantics_3D):
         device = self.get_device()
 
+        B = semantics_3D.shape[0]
+
+        # Create a tensor to hold the updates
         occupancy_grid = torch.zeros(
             (
-                semantics_3D.shape[0],
+                B,
                 self.grid_size[0],
                 self.grid_size[1],
                 self.grid_size[2],
@@ -338,83 +389,73 @@ class SOccDPT(BaseModel):
             device=device,
         )
 
-        for batch_index in range(semantics_3D.shape[0]):
-            cam_points_orig = points[batch_index]
-            semantics = semantics_3D[batch_index]
+        # Filter out points with inf or nan coordinates
+        mask = (
+            (~torch.isinf(points).any(dim=-1)) &
+            (~torch.isnan(points).any(dim=-1))
+        )
 
-            batch_occupancy_grid = torch.zeros(
-                (
-                    self.grid_size[0],
-                    self.grid_size[1],
-                    self.grid_size[2],
-                    self.num_classes,
-                ),
-                dtype=torch.float32,
-                device=device,
-            )
+        # Apply the mask to points and semantics_3D
+        points = torch.masked_select(points, mask.unsqueeze(-1)).reshape(-1, 3)
+        semantics_3D = torch.masked_select(
+            semantics_3D, mask.unsqueeze(-1)
+        ).reshape(-1, self.num_classes)
 
-            cam_points = cam_points_orig.clone()
+        # Compute grid indices
+        occupancy_shape = torch.tensor(
+            self.occupancy_shape
+        ).to(
+            device=device,
+            dtype=torch.float32
+        )
+        grid_size = torch.tensor(
+            self.grid_size
+        ).to(
+            device=device,
+            dtype=torch.float32
+        )
 
-            assert cam_points.shape[0] == semantics.shape[0], \
-                "cam_points and semantics must have the \
-                same number of points, but got {} and {}".format(
-                    cam_points.shape[0], semantics.shape[0]
-                )
+        ijk = (points / occupancy_shape * grid_size).type(
+            torch.int64
+        )
 
-            # Filter out points with inf or nan coordinates
-            mask = (
-                (~torch.isinf(cam_points).any(dim=1)) &
-                (~torch.isnan(cam_points).any(dim=1))
-            )
-            cam_points = cam_points[mask]
-            semantics = semantics[mask]
+        # Filter out points outside the grid
+        mask = (
+            (0 < ijk[..., 0]) & (ijk[..., 0] < self.grid_size[0]) &
+            (0 < ijk[..., 1]) & (ijk[..., 1] < self.grid_size[1]) &
+            (0 < ijk[..., 2]) & (ijk[..., 2] < self.grid_size[2])
+        )
 
-            occupancy_shape = torch.tensor(self.occupancy_shape).to(
-                device=device,
-                dtype=torch.float32
-            )
-            grid_size = torch.tensor(self.grid_size).to(
-                device=device,
-                dtype=torch.float32
-            )
+        # Apply the mask to ijk and semantics_3D
+        ijk = torch.masked_select(
+            ijk,
+            mask.unsqueeze(-1)
+        ).reshape(-1, 3)
+        semantics_3D = torch.masked_select(
+            semantics_3D,
+            mask.unsqueeze(-1)
+        ).reshape(-1, self.num_classes)
 
-            # Compute grid indices
-            ijk = (cam_points / occupancy_shape * grid_size).type(
-                torch.int
-            )
+        # Find the indices where semantics are 1
+        semantics_indices = semantics_3D.nonzero(as_tuple=False)
 
-            # Filter out points outside the grid
-            mask = (
-                (0 < ijk[:, 0])
-                & (ijk[:, 0] < self.grid_size[0])
-                & (0 < ijk[:, 1])
-                & (ijk[:, 1] < self.grid_size[1])
-                & (0 < ijk[:, 2])
-                & (ijk[:, 2] < self.grid_size[2])
-            )
-            ijk = ijk[mask]
-            semantics = semantics[mask]
+        # Get the corresponding ijk indices and create batch indices
+        batch_indices = torch.cat([
+            ijk[semantics_indices[:, 0]],
+            semantics_indices[:, 1].view(-1, 1)
+        ], dim=1)
 
-            # Create a tensor to hold the updates
-            updates = torch.zeros_like(batch_occupancy_grid)
+        # Increment the corresponding cells in the occupancy_grid tensor
+        occupancy_grid[
+            :,
+            batch_indices[:, 0],
+            batch_indices[:, 1],
+            batch_indices[:, 2],
+            batch_indices[:, 3]
+        ] += 1
 
-            # Increment grid cells using scatter_add_
-            for i, (idx, sem) in enumerate(zip(ijk, semantics)):
-                # updates[idx[0], idx[1], idx[2], sem] += 1
-                updates[
-                    int(idx[0]),
-                    int(idx[1]),
-                    int(idx[2]),
-                    sem.type(torch.int),
-                ] += 1
-
-            # Add updates to batch_occupancy_grid
-            batch_occupancy_grid += updates
-
-            occupancy_grid[batch_index, :, :, :, :] = batch_occupancy_grid
-
-        # sigmoid
-        # occupancy_grid = torch.sigmoid(occupancy_grid)
+        # Apply the sigmoid activation after passing
+        # through the convolutional network
         occupancy_grid = occupancy_grid.permute(0, 4, 1, 2, 3)
         occupancy_grid = self.occupancy_conv(occupancy_grid)
         occupancy_grid = occupancy_grid.permute(0, 2, 3, 4, 1)
@@ -483,7 +524,7 @@ class SOccDPT_V1(SOccDPT):
 
 
 class SOccDPT_V2(SOccDPT):
-    def __init__(self, **kwargs):
+    def __init__(self, sigmoid = True, **kwargs):
         super(SOccDPT_V2, self).__init__(**kwargs)
 
         from .loader import load_model
@@ -547,7 +588,12 @@ class SOccDPT_V2(SOccDPT):
             nn.Identity(),
         )
 
-        self.seg_head = nn.Sequential(
+        if sigmoid:
+            activation = nn.Sigmoid()
+        else:
+            activation = ScaledTanh()
+
+        self.seg_ead = nn.Sequential(
             nn.Conv2d(
                 self.features,
                 self.features,
@@ -560,7 +606,7 @@ class SOccDPT_V2(SOccDPT):
             nn.Dropout(0.1, False),
             nn.Conv2d(self.features, self.num_classes, kernel_size=1),
             Interpolate(scale_factor=2, mode="bilinear", align_corners=True),
-            nn.Sigmoid(),
+            activation,
         )
         ##########################
 
@@ -578,7 +624,7 @@ class SOccDPT_V2(SOccDPT):
 
 
 class SOccDPT_V3(SOccDPT):
-    def __init__(self, load_depth: str = DEPTH_l39icv3q, **kwargs):
+    def __init__(self, sigmoid = True, load_depth: str = DEPTH_l39icv3q, **kwargs):
         super(SOccDPT_V3, self).__init__(**kwargs)
 
         from .loader import load_model
@@ -606,6 +652,11 @@ class SOccDPT_V3(SOccDPT):
 
         ##########################
         # Seg head
+        if sigmoid:
+            activation = nn.Sigmoid()
+        else:
+            activation = ScaledTanh()
+        
         self.seg_head = nn.Sequential(
             nn.Conv2d(
                 self.features,
@@ -619,7 +670,7 @@ class SOccDPT_V3(SOccDPT):
             nn.Dropout(0.1, False),
             nn.Conv2d(self.features, self.num_classes, kernel_size=1),
             Interpolate(scale_factor=2, mode="bilinear", align_corners=True),
-            nn.Sigmoid(),
+            activation,
         )
         ##########################
 

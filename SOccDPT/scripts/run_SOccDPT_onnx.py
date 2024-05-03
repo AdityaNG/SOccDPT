@@ -58,7 +58,7 @@ def run_net(
 
     # To enable model serialization after graph optimization set this
     # sess_options.optimized_model_filepath = "{}.opt.onnx".format(load)
-    sess_options.optimized_model_filepath = model_quant
+    # sess_options.optimized_model_filepath = model_quant
 
     net = ort.InferenceSession(load, sess_options, providers=providers)
 
@@ -162,10 +162,11 @@ def run_net(
         cv2.imwrite("test.png", vis_img)
         # break
 
-    N = 50
+    N = 100
     start = time.time()
     for _ in range(N):
-        _ = net.run(None, {"input": x})
+        x_np = x.copy()
+        a = net.run(None, {"input": x_np})
 
         # print(res)
 

@@ -56,6 +56,7 @@ def train_net_wandb():
     loss_weights = wandb.config.loss_weights
     dataset_percentage = wandb.config.dataset_percentage
     compute_scale_and_shift = wandb.config.compute_scale_and_shift
+    sigmoid = wandb.config.sigmoid
     load_depth = wandb.config.load_depth
     load_seg = wandb.config.load_seg
     load = wandb.config.load
@@ -86,6 +87,7 @@ def train_net_wandb():
             loss_weights=loss_weights,
             dataset_percentage=dataset_percentage,
             compute_scale_and_shift=compute_scale_and_shift,
+            sigmoid=sigmoid,
             load=load,
             load_depth=load_depth,
             load_seg=load_seg,
@@ -118,6 +120,7 @@ def train_net(
     loss_weights,
     dataset_percentage,
     compute_scale_and_shift,
+    sigmoid,
     load,
     load_depth,
     load_seg,
@@ -232,12 +235,15 @@ def train_net(
     if SOccDPT_version == 1:
         model_kwargs["load_depth"] = load_depth
         model_kwargs["load_seg"] = load_seg
+        assert sigmoid is False, "V1 does not support sigmoid"
     elif SOccDPT_version == 2:
+        model_kwargs["sigmoid"] = sigmoid
         assert load_depth is False, "V2 does not support loading depth"
         assert load_seg is False, "V2 does not support loading seg"
     elif SOccDPT_version == 3:
         model_kwargs["load_depth"] = load_depth
         assert load_seg is False, "V3 does not support loading seg"
+        model_kwargs["sigmoid"] = sigmoid
 
     net = load_model(
         arch=SOccDPT,

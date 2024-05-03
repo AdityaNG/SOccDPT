@@ -1,0 +1,95 @@
+{
+    "method": "random",
+    "metric": {
+      "goal": "minimize",
+      "name": "train_loss"
+    },
+    "parameters": {
+      "amp": {
+        "values": [
+            false
+        ]
+      },
+      "epochs": {
+        "values": [
+          15
+        ]
+      },
+      "batch_size": {
+        "values": [
+          3
+        ]
+      },
+      "val_percent": {
+        "values": [
+          0.005
+        ]
+      },
+      "weight_decay": {
+        "values": [
+          0
+        ]
+      },
+      "learning_rate": {
+        "values": [
+            0.00001
+        ]
+      },
+      "save_checkpoint": {
+        "values": [
+          true
+        ]
+      },
+      "encoder_percentage": {
+        "values": [
+          0.5
+        ]
+      },
+      "patchwise_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "dataset_percentage": {
+        "values": [
+          1.0
+        ]
+      },
+      "loss_weights": {
+        "values": [
+          [0.75, 0.25],
+          [0.25, 0.75],
+          [0.5, 0.5]
+        ]
+      },
+      "load": {
+        "values": [
+          false
+        ]
+      },
+      "load_depth": {
+        "values": [
+          "checkpoints_pretrained//depth_dpt_swin2_tiny_256/29z6vc9t/checkpoint_epoch10.pth",
+          "checkpoints_pretrained/depth_dpt_swin2_tiny_256/rdx425or/checkpoint_epoch4.pth",
+          "checkpoints_pretrained/depth_dpt_swin2_tiny_256/n2kbxes7/checkpoint_epoch11.pth",
+          "checkpoints_pretrained/depth_dpt_swin2_tiny_256/v5jio69v/checkpoint_epoch15.pth",
+          "weights/dpt_swin2_tiny_256.pt"
+        ]
+      },
+      "load_seg": {
+        "values": [
+          false
+        ]
+      },
+      "compute_scale_and_shift": {
+        "values": [
+          true
+        ]
+      },
+      "sigmoid": {
+        "values": [
+          false
+        ]
+      }
+    }
+  }

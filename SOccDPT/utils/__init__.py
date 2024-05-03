@@ -1,5 +1,3 @@
-import os
-import sys
 import cv2
 import matplotlib as mpl
 import numpy as np
@@ -22,14 +20,16 @@ class DummyWandB:
 
 def blockPrint():
     # Disable printing
-    sys.stdout = open(os.devnull, "w")
+    # sys.stdout = open(os.devnull, "w")
     # sys.stderr = open(os.devnull, "w")
+    pass
 
 
 def enablePrint():
     # Restore printing
-    sys.stdout = sys.__stdout__
+    # sys.stdout = sys.__stdout__
     # sys.stderr = sys.__stderr__
+    pass
 
 
 def color_segmentation(disp_img_masks, frame, class_2_color):
@@ -450,7 +450,16 @@ def evaluate_occupancy(
     # if points is not numpy array, convert to numpy array
     # TODO: Convert occupancy grid to points
     occupancy_grid = y_occupancy_grid[0].detach().squeeze().cpu().numpy()
-    occupancy_points = occupancy_grid_to_points(occupancy_grid)
+    occupancy_points = occupancy_grid_to_points(
+        occupancy_grid,
+        grid_size=(256, 256, 32),  # Occupancy grid size in voxels
+        scale=(2.0, 2.0, 0.666),  # voxels per meter
+        shift=(0.0, 0.0, 0.0),  # meters
+    )
+    print("occupancy_points.shape", occupancy_points.shape)
+    print("x", occupancy_points[:,0].min(), occupancy_points[:,0].max(), occupancy_points[:,0].mean(), occupancy_points[:,0].std())
+    print("y", occupancy_points[:,1].min(), occupancy_points[:,1].max(), occupancy_points[:,1].mean(), occupancy_points[:,1].std())
+    print("z", occupancy_points[:,2].min(), occupancy_points[:,2].max(), occupancy_points[:,2].mean(), occupancy_points[:,2].std())
     plot_points_gt, plot_colors_gt = semantic_pc_to_colors_and_pc(
         occupancy_points,
         class_2_color,
@@ -458,7 +467,16 @@ def evaluate_occupancy(
     plot_points_colors_gt = np.hstack([plot_points_gt, plot_colors_gt])
 
     occupancy_grid = y_occupancy_grid_pred[0].detach().squeeze().cpu().numpy()
-    occupancy_points = occupancy_grid_to_points(occupancy_grid)
+    occupancy_points = occupancy_grid_to_points(
+        occupancy_grid,
+        grid_size=(256, 256, 32),  # Occupancy grid size in voxels
+        scale=(2.0, 2.0, 0.666),  # voxels per meter
+        shift=(0.0, 0.0, 0.0),  # meters
+    )
+    print("occupancy_points.shape", occupancy_points.shape)
+    print("x", occupancy_points[:,0].min(), occupancy_points[:,0].max(), occupancy_points[:,0].mean(), occupancy_points[:,0].std())
+    print("y", occupancy_points[:,1].min(), occupancy_points[:,1].max(), occupancy_points[:,1].mean(), occupancy_points[:,1].std())
+    print("z", occupancy_points[:,2].min(), occupancy_points[:,2].max(), occupancy_points[:,2].mean(), occupancy_points[:,2].std())
     plot_points_pred, plot_colors_pred = semantic_pc_to_colors_and_pc(
         occupancy_points,
         class_2_color,
@@ -517,6 +535,8 @@ def occupancy_grid_to_points(
     scale=(2.0, 2.0, 0.666),  # voxels per meter
     shift=(0.0, 0.0, 0.0),  # meters
 ):
+    
+    assert len(occupancy_grid.shape) == 4, "occupancy_grid must be 3D with one channel per class"
 
     occupancy_shape = list(
         map(
@@ -543,6 +563,7 @@ def occupancy_grid_to_points(
         )
         occupancy_points.append(class_points)
     occupancy_points = np.concatenate(occupancy_points, axis=0)
+    # occupancy_points = occupancy_points.astype(int)
 
     return occupancy_points
 

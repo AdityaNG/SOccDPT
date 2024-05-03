@@ -18,18 +18,18 @@ class BaseModel(torch.nn.Module):
             parameters = parameters["model"]
 
         # validate all keys in state_dict are present in self.state_dict()
-        for k in parameters:
-            if k not in self.state_dict():
-                raise Exception(
-                    "Loading: {self.__class__.__name__} state_dict does not \
-                        contain key {k} when loading from {path}".format(
-                            self=self, k=k, path=path
-                        )
-                )
+        # for k in parameters:
+        #     if k not in self.state_dict():
+        #         raise Exception(
+        #             "Loading: {self.__class__.__name__} state_dict does not \
+        #                 contain key {k} when loading from {path}".format(
+        #                     self=self, k=k, path=path
+        #                 )
+        #         )
 
         incompatible_keys = self.load_state_dict(
             parameters,
-            strict=True,
+            strict=False,
         )
         print("incompatible_keys", incompatible_keys)
 

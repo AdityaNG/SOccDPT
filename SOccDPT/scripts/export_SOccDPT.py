@@ -117,7 +117,7 @@ def export_net(
 
     x.requires_grad = True
 
-    y_disp_pred, y_seg_pred, points = net(x)
+    y_disp_pred, y_seg_pred, points, occupancy_grid = net(x)
 
     torch.onnx.export(
         # model being run

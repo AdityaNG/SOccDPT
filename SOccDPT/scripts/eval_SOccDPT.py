@@ -180,7 +180,7 @@ def main(args):
         mask_disp = mask_disp.to(device=device, dtype=torch.bool)
         mask_seg = mask_seg.to(device=device, dtype=torch.bool)
 
-        y_disp_pred, y_seg_pred, points = net(x)
+        y_disp_pred, y_seg_pred, points, occupancy_grid = net(x)
 
         # File name 000x.png
         file_name = f"{index:04d}.png"

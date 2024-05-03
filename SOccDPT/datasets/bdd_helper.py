@@ -650,3 +650,4 @@ def rotate_points(points, angles):
     rotated_points = np.dot(rotated_points, rotation_matrix_c.T)
 
     return rotated_points
+
