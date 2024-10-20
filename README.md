@@ -41,7 +41,7 @@ Cite our work if you find it useful
 
 ```bibtex
 @article{nalgunda2024soccdpt,
-  author = {Nalgunda, Aditya Ganesh},
+  author = {Aditya Nalgunda Ganesh},
   title = {SOccDPT: 3D Semantic Occupancy from Dense Prediction Transformers trained under memory constraints},
   journal = {Advances in Artificial Intelligence and Machine Learning},
   volume = {4},
