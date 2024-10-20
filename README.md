@@ -40,12 +40,13 @@ Read more in [TRAIN.md](TRAIN.md)
 Cite our work if you find it useful
 
 ```bibtex
-@article{NG2024SOccDPT,
-  title={SOccDPT: 3D Semantic Occupancy from Dense Prediction Transformers trained under memory constraints},
-  author={NG, Aditya},
-  journal={Advances in Artificial Intelligence and Machine Learning},
-  volume={ISSN: 2582-9793, Source Id: 21101164612},
-  year={2024},
-  url={https://www.oajaiml.com/}
+@article{nalgunda2024soccdpt,
+  author = {Nalgunda, Aditya Ganesh},
+  title = {SOccDPT: 3D Semantic Occupancy from Dense Prediction Transformers trained under memory constraints},
+  journal = {Advances in Artificial Intelligence and Machine Learning},
+  volume = {4},
+  number = {2},
+  pages = {2201--2212},
+  year = {2024}
 }
 ```
